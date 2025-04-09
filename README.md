@@ -47,9 +47,6 @@ progetto_stopme/
 │   ├── bluecoin.py                # Manages BlueCoin device connections and data
 │   └── feature_listener.py        # Generic listener that uses recognizers
 
-├── system/                        # System-level diagnostics and logging
-│   └── system_logger.py           # Logs internal state (connections, errors, etc.)
-
 ├── utils/                         # Utility functions and helpers
 │   └── file_utils.py              # Manages file paths, names, timestamps
 
