@@ -14,11 +14,14 @@ This repository evolves from a working prototype (**STOPme_V0.3.0**) and restruc
 - Structured and thread-safe event + system logging
 - Scalable, testable, and maintainable architecture
 
-## Installation
-
 ## Requirements
+Cosa serve? (Ubuntu, Python ecc)
+
+## Installation
+(sudo apt install... pip install...)
 
 ## Usage examples
+--
 
 ## Project Structure
 
