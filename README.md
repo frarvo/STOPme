@@ -6,7 +6,6 @@ STOPme is a modular and extensible Python system designed to connect wireless BL
 This repository evolves from a working prototype (**STOPme_V0.3.0**) and restructures it into a fully decoupled architecture with centralized event dispatching, modular actuator control, and structured logging.
 
 ## Features
-
 - Real-time acquisition from BLE devices (BlueCoin, MetaMotion)
 - Local event recognition logic via configurable recognizers
 - Modular actuator control (LED strip, vibration motor, speaker, logger)
@@ -24,7 +23,6 @@ Cosa serve? (Ubuntu, Python ecc)
 --
 
 ## Project Structure
-
 ```bash
 progetto_stopme/
 ├── main.py                        # Entry point of the application
@@ -61,3 +59,11 @@ progetto_stopme/
     └── STOPme_V0.3.0/
         ├── PROTOTYPE_V0.3.0.py    # Original monolithic main script
         └── MyModules/             # Support modules for the prototype
+```
+
+## Legacy
+The folder `legacy/STOPme_V0.3.0/` contains the original monolithic prototype that this project is based on.
+
+It includes functional but tightly coupled logic for BLE sensor handling, actuation, and logging, and served as the foundation for the current modular architecture.
+
+This code is preserved for reference only and is no longer maintained.
