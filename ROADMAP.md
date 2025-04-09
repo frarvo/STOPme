@@ -1,4 +1,4 @@
-# STOPME - DEVELOPMENT ROADMAP
+# STOPme - DEVELOPMENT ROADMAP
 
 This roadmap describes the implementation phases of the STOPME system, focusing on building a modular, scalable and maintainable architecture for real-time BLE-driven multisensory interaction.
 
