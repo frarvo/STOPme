@@ -9,8 +9,7 @@ Completed tasks should be moved to the DONE section.
 ### PHASE 1 – Module Restructuring and Base Refactoring
 - [ ] Standardize all actuator modules (threads, interfaces, reconnection)
 - [ ] Move MetaMotion to `actuators/vibration.py`
-- [ ] Create `actuators/logger.py` for event logging
-- [ ] Implement `system/system_logger.py` for internal logs
+- [ ] Create `actuators/logger.py` for event logging and system logging
 
 ### PHASE 2 – Control Architecture
 - [ ] Create `core/actuator_manager.py` with unified `trigger()` method
@@ -24,9 +23,8 @@ Completed tasks should be moved to the DONE section.
 - [ ] Simplify `bluecoin.py` to only manage connection and data forwarding
 
 ### PHASE 4 – Utilities and Cleanup
-- [ ] Move prototype to `legacy/STOPme_V0.3.0/` and add local README
-- [ ] Remove `logs/` from repository (use runtime directories)
 - [ ] Create and use `config.yaml` for MACs, mappings, thresholds
 - [ ] Implement `utils/file_utils.py` for filename and path generation
 
 ## DONE
+- [x] Move prototype to `legacy/STOPme_V0.3.0/` and add local README
