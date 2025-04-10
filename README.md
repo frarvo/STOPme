@@ -64,3 +64,20 @@ The folder `legacy/STOPme_V0.3.0/` contains the original monolithic prototype th
 It includes functional but tightly coupled logic for BLE sensor handling, actuation, and logging, and served as the foundation for the current modular architecture.
 
 This code is preserved for reference only and is no longer maintained.
+
+## License
+
+This project is licensed under the MIT License.
+
+### Third-Party Licenses
+
+This project uses several third-party Python packages, each governed by its own license. Below is a summary of the main dependencies:
+
+- **metawear**, **warble** – Provided by [MbientLab](https://www.mbientlab.com). These packages are used unmodified and are not redistributed with this project. Some of them may interact with the BlueZ Bluetooth stack (GPLv2), but this project does not include, modify, or statically link any GPL-licensed code.
+- **blue-st-sdk** – Licensed under the BSD License. This SDK from STMicroelectronics is compatible with the MIT License and used as a runtime dependency.
+- **bluepy** – A Python interface to Bluetooth Low Energy on Linux. License not explicitly stated in the package, but the project references BlueZ (GPLv2). This project uses `bluepy` as a runtime dependency without modification or redistribution.
+- **playsound** – Licensed under the MIT License. It is a simple audio playback module, fully compatible with this project's MIT licensing.
+- **flux_led** – Licensed under LGPLv3+. It is used as a runtime dependency and not modified or statically linked, making it compatible with this project’s MIT license.
+- **Other packages** (e.g., `requests`, `urllib3`, `charset-normalizer`, `idna`, `pyserial`, `webcolors`, `certifi`, etc.) are licensed under permissive licenses such as MIT, BSD, Apache 2.0, or MPL 2.0 and are fully compatible with this project when used as unmodified runtime dependencies.
+
+**Note:** This project does **not** include or redistribute any third-party source code or binaries. All dependencies are used as runtime libraries via `pip` and remain subject to their original licenses.
