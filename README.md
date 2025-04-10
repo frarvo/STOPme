@@ -74,7 +74,7 @@ This project is licensed under the MIT License.
 This project uses several third-party Python packages, each governed by its own license. Below is a summary of the main dependencies:
 
 - **metawear**, **warble** – Provided by [MbientLab](https://www.mbientlab.com). These packages are used unmodified and are not redistributed with this project. Some of them may interact with the BlueZ Bluetooth stack (GPLv2), but this project does not include, modify, or statically link any GPL-licensed code.
-- **blue-st-sdk** – Licensed under the BSD License. This SDK from STMicroelectronics is compatible with the MIT License and used as a runtime dependency.
+- **blue-st-sdk** – Licensed under a BSD-style License from [STMicroelectronics](https://www.st.com/content/st_com/en.html) Fully compatible with the project's MIT licensing.
 - **bluepy** – A Python interface to Bluetooth Low Energy on Linux. License not explicitly stated in the package, but the project references BlueZ (GPLv2). This project uses `bluepy` as a runtime dependency without modification or redistribution.
 - **playsound** – Licensed under the MIT License. It is a simple audio playback module, fully compatible with this project's MIT licensing.
 - **flux_led** – Licensed under LGPLv3+. It is used as a runtime dependency and not modified or statically linked, making it compatible with this project’s MIT license.
