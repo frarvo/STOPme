@@ -9,7 +9,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from utils.config import get_log_path,event_details_enabled,system_log_enabled
+from utils.config import get_log_path, actuation_details_enabled, system_log_enabled, debug_system_console_enabled, debug_event_console_enabled
 
 def _ensure_dir(path: Path):
     """Ensures that a given directory path exists. Creates it if it doesn't exist."""
@@ -41,14 +41,14 @@ def log_event(timestamp: str, feature_type: str, event: str, actuations: list, s
 
     date_str = datetime.fromisoformat(timestamp).strftime("%d-%m-%Y")
     time_str = datetime.fromisoformat(timestamp).strftime("%H:%M:%S")
-    
+
     # ACTUATION STRING
     # actions = list of actuators and their parameters
     actions = []
     for action in actuations:
         target_name = action["target"].upper() #target is the actuator. e.g. LED, METAMOTION, SPEAKER
-        
-        if event_details_enabled():
+
+        if actuation_details_enabled():
             # if event details enabled creates a string (formatted) with actuation type and parameters
             params = action.get("params", {}) # dict with params of a single actuator
             param_str = ", ".join(f"{key}={value}" for key,value in params.items()) # turn dict params into string
@@ -56,11 +56,11 @@ def log_event(timestamp: str, feature_type: str, event: str, actuations: list, s
         else:
             # else the string contains only the actuator name
             formatted = target_name
-    
+
         actions.append(formatted)
-    
+
     action_str = ", ".join(actions)
-                
+
 
     # LOG FILE
     log_filename = f"Event_Diary_{source}.log"
@@ -70,6 +70,9 @@ def log_event(timestamp: str, feature_type: str, event: str, actuations: list, s
 
     with open(log_path, "a") as f:
         f.write(line_txt)
+
+    if debug_event_console_enabled():
+        print(line_txt.strip())
 
     # CSV FILE
     csv_filename = f"Event_Diary_{source}.csv"
@@ -104,3 +107,6 @@ def log_system(message: str, level: str = "INFO"):
 
     with open(filepath, "a") as f:
         f.write(line)
+
+    if debug_system_console_enabled():
+        print(line.strip())
