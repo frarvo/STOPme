@@ -1,3 +1,10 @@
+# config.py
+# Configuration loader for the STOPME system
+
+# Author: Francesco Urru
+# GitHub: https://github.com/frarvo
+# Repository: https://github.com/frarvo/STOPme
+# License: MIT
 
 import yaml
 from pathlib import Path
