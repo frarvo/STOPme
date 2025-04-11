@@ -4,7 +4,7 @@
 # Author: Francesco Urru
 # GitHub: https://github.com/frarvo
 # Repository: https://github.com/frarvo/STOPme
-# License: MIT
+# License: MIT 
 
 import yaml
 from pathlib import Path
