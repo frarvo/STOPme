@@ -1,6 +1,6 @@
 # STOPME Configuration File
 # Author: Francesco Urru
-# https://github.com/frarvo/STOPme
+# https://github.com/frarvo/STOPme 
 
 log_base_path: ~/Documents/STOPME/logs  # Path where logs are saved. User folder is automatically detected
 log_actuation_details: false            # Log actuation details: duration, duty cycle, intensity, pattern ecc...
