@@ -94,19 +94,21 @@ def log_system(message: str, level: str = "INFO"):
         message (str): The message to log
         level (str): Logging level (INFO, WARNING, ERROR)
     """
+
+    date = datetime.now().strftime("%d-%m-%Y")
+    time = datetime.now().strftime("%H:%M:%S")
+    line = f"[{date} {time}] - {level.upper()} - {message}\n"
+
+    if debug_system_console_enabled():
+        print(line.strip())
+        
     if not system_log_enabled():
         return
 
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
     filepath = folder / "System_Log.log"
-
-    date = datetime.now().strftime("%d-%m-%Y")
-    time = datetime.now().strftime("%H:%M:%S")
-    line = f"[{date} {time}] - {level.upper()} - {message}\n"
-
+    
     with open(filepath, "a") as f:
         f.write(line)
 
-    if debug_system_console_enabled():
-        print(line.strip())
