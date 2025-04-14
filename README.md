@@ -48,9 +48,11 @@ progetto_stopme/
 │   └── feature_listener.py        # Generic listener that uses recognizers
 
 ├── utils/                         # Utility functions and helpers
-│   └── file_utils.py              # Manages file paths, names, timestamps
+│   └── config.py                  # Manages general configuration, paths and timeouts
+│   └── audio_paths.py             # Manages file paths, names
 
-├── assets/                        # Audio, visual, or external resources (e.g. patterns, mp3s)
+├── assets/                        # Audio, visual, or external resources
+│   └── audio/                     # Audio alerts in mp3 format
 
 └── legacy/                        # Previous working prototype for reference only
     └── STOPme_V0.3.0/
