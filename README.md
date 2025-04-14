@@ -14,13 +14,52 @@ This repository evolves from a working prototype (**STOPme_V0.3.0**) and restruc
 - Scalable, testable, and maintainable architecture
 
 ## Requirements
-Cosa serve? (Ubuntu, Python ecc)
+### Operating system
+Tested on Ubuntu 20.04 on MSI Cubi N ADL. Detected incompatibilities with newer versions (22.04, 24.04).
+### Python version
+Tested on Python 3.9.5. Both PyCharm virtual environment and system wide installation. Detected slight incompatibilities with newer versions due to outdated 
+dependencies.
+### pip version
+pip 23.2.1
 
-## Installation
-(sudo apt install... pip install...)
+### System dependencies
+Be sure to update the apt repositories and install the needed packages:
+sudo apt udpdate 
+sudo apt upgrade
+sudo apt install python3-pip python3-distutils libglib2.0-dev
+sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev 	libexpat1-dev liblzma-dev zlib1g-dev libffi-dev bluetooth bluez libbluetooth-dev libudev-dev libboost-all-dev
 
-## Usage examples
---
+### Python dependencies
+It is advised to install the dependencies in the presented order
+#### [BlueST-SDK-Python](https://github.com/STMicroelectronics/BlueSTSDK_Python)
+pip install blue-st-sdk
+
+#### bluepy
+pip install bluepy
+*NOTE: bluepy need sudo permission to access bluetooth devices. To grand these permission:
+        1) install setcap: sudo apt install libcap2-bin
+        2) execute: sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper
+
+#### [MetaWear-SDK-Python](https://github.com/mbientlab/MetaWear-SDK-Python/tree/master)
+pip install metawear
+
+#### [PyWarble](https://github.com/mbientlab/PyWarble)
+*NOTE: warble is automatically installed as a metawear dependency. I detected problems with the release version which cause buffer overflow during execution.
+Due to inexperience in debugging and copyright policy i could not modify the source code, but i noticed that compiling in debug mode resolves the issue.
+To compile in debug mode:
+    1) uninstall the automatically installed version: "pip uninstall warble"
+    2) clone the git repo (if you don't have git installed: "sudo apt install git"): "git clone --recurse-submodules https://github.com/mbientlab/PyWarble.git"
+    3) cd into the PyWarble folder 
+    4) edit the setup.py
+        a) change row 77 from "args = ["make", "-C", warble, "-j%d" % (cpu_count())]" to "args = ["make", "-C", warble, "CONFIG=debug”, “j%d" % (cpu_count())]"
+        b) change row 89 from "so = os.path.join(warble, 'dist', 'release', 'lib', machine)" to “so = os.path.join(warble, 'dist', 'debug', 'lib', machine)"
+    5) execute setup: "pip install ."
+    6) verify correct installation with "pip list", warble 1.2.8 should appear in the list.
+
+
+#### others
+pip install opuslib playsound flux_led
+
 
 ## Project Structure
 ```bash
