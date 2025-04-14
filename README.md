@@ -23,22 +23,22 @@ dependencies.
 pip 23.2.1
 
 ### System dependencies
-Be sure to update the apt repositories and install the needed packages:
-sudo apt udpdate 
-sudo apt upgrade
-sudo apt install python3-pip python3-distutils libglib2.0-dev
-sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev 	libexpat1-dev liblzma-dev zlib1g-dev libffi-dev bluetooth bluez libbluetooth-dev libudev-dev libboost-all-dev
+Be sure to update the apt repositories and install the needed packages.
+sudo apt update.
+sudo apt upgrade.
+sudo apt install python3-pip python3-distutils libglib2.0-dev.
+sudo apt-get install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev 	libexpat1-dev liblzma-dev zlib1g-dev libffi-dev bluetooth bluez libbluetooth-dev libudev-dev libboost-all-dev.
 
 ### Python dependencies
-It is advised to install the dependencies in the presented order
+It is advised to install the dependencies in the presented order.
 #### [BlueST-SDK-Python](https://github.com/STMicroelectronics/BlueSTSDK_Python)
-pip install blue-st-sdk
+pip install blue-st-sdk.
 
 #### bluepy
 pip install bluepy
 *NOTE: bluepy need sudo permission to access bluetooth devices. To grand these permission:
-        1) install setcap: sudo apt install libcap2-bin
-        2) execute: sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper
+        1) install setcap: sudo apt install libcap2-bin.
+        2) execute: sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper.
 
 #### [MetaWear-SDK-Python](https://github.com/mbientlab/MetaWear-SDK-Python/tree/master)
 pip install metawear
