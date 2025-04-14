@@ -57,30 +57,46 @@ pip install bluepy
 *NOTE: bluepy need sudo permission to access bluetooth devices. To grand these permission:
 ```bash
 sudo apt install libcap2-bin.
-sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper.
+sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/$USER/.local/lib/python3.9/site-packages/bluepy/bluepy-helper.
 ```
 
 #### [MetaWear-SDK-Python](https://github.com/mbientlab/MetaWear-SDK-Python/tree/master)
 ```bash
-```
 pip install metawear
+```
 
 #### [PyWarble](https://github.com/mbientlab/PyWarble)
-*NOTE: warble is automatically installed as a metawear dependency. I detected problems with the release version which cause buffer overflow during execution.
-Due to inexperience in debugging and copyright policy i could not modify the source code, but i noticed that compiling in debug mode resolves the issue.
+*NOTE: warble is automatically installed as a metawear dependency. Release version causes buffer overflow. Debug mode resolves the issue.
 To compile in debug mode:
-    1) uninstall the automatically installed version: "pip uninstall warble"
-    2) clone the git repo (if you don't have git installed: "sudo apt install git"): "git clone --recurse-submodules https://github.com/mbientlab/PyWarble.git"
-    3) cd into the PyWarble folder 
-    4) edit the setup.py
+1) Uninstall the automatically installed version:
+```bash
+pip uninstall warble
+```
+2) If you don't have git installed:
+```
+sudo apt install git
+```
+3) Clone the git repo:
+```
+git clone --recurse-submodules https://github.com/mbientlab/PyWarble.git
+```
+4) Move into the PyWarble folder
+```
+cd PyWarble
+```
+6) Edit the setup.py
         a) change row 77 from "args = ["make", "-C", warble, "-j%d" % (cpu_count())]" to "args = ["make", "-C", warble, "CONFIG=debug”, “j%d" % (cpu_count())]"
         b) change row 89 from "so = os.path.join(warble, 'dist', 'release', 'lib', machine)" to “so = os.path.join(warble, 'dist', 'debug', 'lib', machine)"
-    5) execute setup: "pip install ."
-    6) verify correct installation with "pip list", warble 1.2.8 should appear in the list.
-
+5) execute setup:
+```
+pip install .
+```
+7) verify correct installation with "pip list", warble 1.2.8 should appear in the list.
 
 #### others
+```bash
 pip install opuslib playsound flux_led
+```
 
 
 ## Project Structure
