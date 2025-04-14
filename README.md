@@ -102,7 +102,7 @@ pip install opuslib playsound flux_led
 
 
 ## Project Structure
-bash
+```bash
 progetto_stopme/
 ├── main.py                        # Entry point of the application
 ├── config.yaml                    # Configuration file for devices, thresholds, mappings
@@ -137,7 +137,7 @@ progetto_stopme/
     └── STOPme_V0.3.0/
         ├── PROTOTYPE_V0.3.0.py    # Original monolithic main script
         └── MyModules/             # Support modules for the prototype
-
+```
 
 ## Legacy
 The folder legacy/STOPme_V0.3.0/ contains the original monolithic prototype that this project is based on.
