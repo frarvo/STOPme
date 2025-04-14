@@ -41,19 +41,28 @@ sudo apt install python3-pip python3-distutils libglib2.0-dev
 sudo apt install -y build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev \
 libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev \
 zlib1g-dev libffi-dev bluetooth bluez libbluetooth-dev libudev-dev libboost-all-dev
+```
 
 ### Python dependencies
 It is advised to install the dependencies in the presented order.
 #### [BlueST-SDK-Python](https://github.com/STMicroelectronics/BlueSTSDK_Python)
+```bash
 pip install blue-st-sdk.
+```
 
 #### bluepy
+```bash
 pip install bluepy
+```
 *NOTE: bluepy need sudo permission to access bluetooth devices. To grand these permission:
-        1) install setcap: sudo apt install libcap2-bin.
-        2) execute: sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper.
+```bash
+sudo apt install libcap2-bin.
+sudo setcap “cap_net_raw+eip cap_net_admin+eip” /home/<USER>/.local/lib/python3.9/site-packages/bluepy/bluepy-helper.
+```
 
 #### [MetaWear-SDK-Python](https://github.com/mbientlab/MetaWear-SDK-Python/tree/master)
+```bash
+```
 pip install metawear
 
 #### [PyWarble](https://github.com/mbientlab/PyWarble)
@@ -75,7 +84,7 @@ pip install opuslib playsound flux_led
 
 
 ## Project Structure
-```bash
+bash
 progetto_stopme/
 ├── main.py                        # Entry point of the application
 ├── config.yaml                    # Configuration file for devices, thresholds, mappings
@@ -110,10 +119,10 @@ progetto_stopme/
     └── STOPme_V0.3.0/
         ├── PROTOTYPE_V0.3.0.py    # Original monolithic main script
         └── MyModules/             # Support modules for the prototype
-```
+
 
 ## Legacy
-The folder `legacy/STOPme_V0.3.0/` contains the original monolithic prototype that this project is based on.
+The folder legacy/STOPme_V0.3.0/ contains the original monolithic prototype that this project is based on.
 
 It includes functional but tightly coupled logic for BLE sensor handling, actuation, and logging, and served as the foundation for the current modular architecture.
 
@@ -129,9 +138,9 @@ This project uses several third-party Python packages, each governed by its own 
 
 - **metawear**, **pywarble** – Provided by [MbientLab](https://www.mbientlab.com). These packages are used unmodified and are not redistributed with this project. Some of them may interact with the BlueZ Bluetooth stack (GPLv2), but this project does not include, modify, or statically link any GPL-licensed code.
 - **blue-st-sdk** – Licensed under a BSD-style License from [STMicroelectronics](https://www.st.com/content/st_com/en.html) Fully compatible with the project's MIT licensing.
-- **bluepy** – A Python interface to Bluetooth Low Energy on Linux. License not explicitly stated in the package, but the project references BlueZ (GPLv2). This project uses `bluepy` as a runtime dependency without modification or redistribution.
+- **bluepy** – A Python interface to Bluetooth Low Energy on Linux. License not explicitly stated in the package, but the project references BlueZ (GPLv2). This project uses bluepy as a runtime dependency without modification or redistribution.
 - **playsound** – Licensed under the MIT License. It is a simple audio playback module, fully compatible with this project's MIT licensing.
 - **flux_led** – Licensed under LGPLv3+. It is used as a runtime dependency and not modified or statically linked, making it compatible with this project’s MIT license.
-- **Other packages** (e.g., `requests`, `urllib3`, `charset-normalizer`, `idna`, `pyserial`, `webcolors`, `certifi`, etc.) are licensed under permissive licenses such as MIT, BSD, Apache 2.0, or MPL 2.0 and are fully compatible with this project when used as unmodified runtime dependencies.
+- **Other packages** (e.g., requests, urllib3, charset-normalizer, idna, pyserial, webcolors, certifi, etc.) are licensed under permissive licenses such as MIT, BSD, Apache 2.0, or MPL 2.0 and are fully compatible with this project when used as unmodified runtime dependencies.
 
-**Note:** This project does **not** include or redistribute any third-party source code or binaries. All dependencies are used as runtime libraries via `pip` and remain subject to their original licenses.
+**Note:** This project does **not** include or redistribute any third-party source code or binaries. All dependencies are used as runtime libraries via pip and remain subject to their original licenses.
