@@ -85,8 +85,10 @@ git clone --recurse-submodules https://github.com/mbientlab/PyWarble.git
 cd PyWarble
 ```
 6) Edit the setup.py
-        a) change row 77 from "args = ["make", "-C", warble, "-j%d" % (cpu_count())]" to "args = ["make", "-C", warble, "CONFIG=debug”, “j%d" % (cpu_count())]"
-        b) change row 89 from "so = os.path.join(warble, 'dist', 'release', 'lib', machine)" to “so = os.path.join(warble, 'dist', 'debug', 'lib', machine)"
+```
+change row 77 from "args = ["make", "-C", warble, "-j%d" % (cpu_count())]" to "args = ["make", "-C", warble, "CONFIG=debug”, “j%d" % (cpu_count())]"
+change row 89 from "so = os.path.join(warble, 'dist', 'release', 'lib', machine)" to “so = os.path.join(warble, 'dist', 'debug', 'lib', machine)"
+```
 5) execute setup:
 ```
 pip install .
