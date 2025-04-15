@@ -1,11 +1,3 @@
-# config.py
-# Configuration loader for the STOPME system
-
-# Author: Francesco Urru
-# GitHub: https://github.com/frarvo
-# Repository: https://github.com/frarvo/STOPme
-# License: MIT 
-
 import yaml
 from pathlib import Path
 from os.path import expanduser
@@ -41,3 +33,26 @@ def debug_system_console_enabled() -> bool:
 def debug_event_console_enabled()-> bool:
     return CONFIG.get("debug_event_console", False)
 
+# METAMOTION
+def get_metamotion_config() -> dict:
+    """
+    Returns the MetaMotion configuration dictionary from config.yaml
+    :return:
+    """
+    return CONFIG.get("metamotion", {})
+
+# SPEAKER
+def get_speaker_config() -> dict:
+    """
+    Returns the Speaker configuration dictionary from config.yaml
+    :return:
+    """
+    return CONFIG.get("speaker", {})
+
+# LED_STRIP
+def get_led_strip_config() -> dict:
+    """
+    Returns the Led_Strip configuration dictionary from config.yaml
+    :return:
+    """
+    return CONFIG.get("led_strip", {})
