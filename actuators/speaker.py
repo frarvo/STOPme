@@ -11,6 +11,8 @@ import subprocess
 import time
 from playsound import playsound
 from actuators.logger import log_system
+from utils.config import get_speaker_config
+
 
 class SpeakerThread(threading.Thread):
     """
@@ -36,8 +38,13 @@ class SpeakerThread(threading.Thread):
         self.event = threading.Event()
         self.stop_event = threading.Event()
         self.file = None
-        self.retry_interval = 5  # seconds
         self.connected = False
+
+        speaker_config = get_speaker_config()
+        self.timeout = speaker_config.get("timeout", 5)
+        self.fast_retry_attempts = speaker_config.get("fast_retry_attempts", 5)
+        self.retry_interval = speaker_config.get("retry_interval", 5)
+        self.retry_sleep = speaker_config.get("retry_sleep", 60)
 
     def run(self):
         """
@@ -45,9 +52,11 @@ class SpeakerThread(threading.Thread):
         """
         log_system(f"[Speaker: {self.mac_address}] Thread started")
 
+        self._reconnection_attempts()
+
         while not self.stop_event.is_set():
             if not self._is_connected():
-                self._connect()
+                self._reconnection_attempts()
 
             if self.event.is_set() and self.connected:
                 try:
@@ -58,10 +67,9 @@ class SpeakerThread(threading.Thread):
                 finally:
                     self.event.clear()
 
-            time.sleep(1)  # lightweight polling loop
+            time.sleep(1)
 
         self._disconnect()
-        
 
     def execute(self, **kwargs):
         """
@@ -72,7 +80,7 @@ class SpeakerThread(threading.Thread):
         """
         file = kwargs.get("file")
         if not file:
-            log_system(f"[Speaker: {self.mac_address}] No audio file provided to speaker", level="WARNING")
+            log_system(f"[Speaker: {self.mac_address}] No audio file provided", level="WARNING")
             return
         self.file = file
         self.event.set()
@@ -93,18 +101,17 @@ class SpeakerThread(threading.Thread):
         try:
             result = subprocess.run(
                 ["bluetoothctl", "connect", self.mac_address],
-                capture_output=True, text=True
+                capture_output=True, text=True, timeout=self.timeout
             )
             if "Connection successful" in result.stdout:
                 self.connected = True
-                log_system(f"[Speaker: {self.mac_address}] Connected")
+                log_system(f"[Speaker: {self.mac_address}] Connected successfully")
             else:
                 log_system(f"[Speaker: {self.mac_address}] Connection failed: {result.stdout}", level="WARNING")
                 self.connected = False
         except Exception as e:
             log_system(f"[Speaker: {self.mac_address}] Exception during connection: {e}", level="ERROR")
             self.connected = False
-            time.sleep(self.retry_interval)
 
     def _disconnect(self):
         """
@@ -118,7 +125,7 @@ class SpeakerThread(threading.Thread):
             self.connected = False
             log_system(f"[Speaker: {self.mac_address}] Disconnected")
         except Exception as e:
-            log_system(f" [Speaker: {self.mac_address}] Exception during disconnection: {e}", level="ERROR")
+            log_system(f"[Speaker: {self.mac_address}] Exception during disconnection: {e}", level="ERROR")
 
     def _is_connected(self) -> bool:
         """
@@ -134,3 +141,32 @@ class SpeakerThread(threading.Thread):
         except Exception as e:
             log_system(f"[Speaker: {self.mac_address}] Error checking status: {e}", level="ERROR")
             return False
+
+    def _reconnection_attempts(self):
+        """
+        Attempts to reconnect to the speaker using fast and slow retry strategies.
+        """
+        log_system(f"[Speaker: {self.mac_address}] Starting reconnection procedure.")
+        self._disconnect()
+
+        # Fast retry attempts
+        for attempt in range(self.fast_retry_attempts):
+            if self.stop_event.is_set():
+                return
+            self._connect()
+            if self.connected:
+                log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
+                return
+            else:
+                log_system(f"[Speaker: {self.mac_address}] Retry {attempt + 1}/{self.fast_retry_attempts} failed", level="WARNING")
+                time.sleep(self.retry_interval)
+
+        # Slow retry loop
+        log_system(f"[Speaker: {self.mac_address}] All fast retries failed. Retrying every {self.retry_sleep}s.")
+        while not self.stop_event.is_set():
+            self._connect()
+            if self.connected:
+                log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
+                return
+            log_system(f"[Speaker: {self.mac_address}] Slow retry failed", level="WARNING")
+            time.sleep(self.retry_sleep)
