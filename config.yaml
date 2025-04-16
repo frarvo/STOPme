@@ -18,10 +18,10 @@ speaker:
   retry_sleep: 60             # Wait time between subsequent retries
 
 led_strip:
-  scan_timeout: 5            # First scan duration in seconds
+  scan_timeout: 5             # First scan duration in seconds
   fast_retry_attempts: 5      # Number of fast retries after a disconnection
-  retry_interval: 5           # Wait time between fast retries
-  retry_sleep: 60             # Wait time between subsequent retries
+  retry_interval: 30          # Wait time between fast retries
+  retry_sleep: 120            # Wait time between subsequent retries
 
 thresholds:
   temperature:
