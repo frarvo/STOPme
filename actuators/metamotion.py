@@ -14,7 +14,34 @@ from mbientlab.metawear import MetaWear, libmetawear
 from mbientlab.warble import WarbleException
 from utils.config import get_metamotion_config
 from actuators.logger import log_system
+from bluepy.btle import Scanner
 
+def scan_metamotion_devices(timeout: int = 5) -> list[str]:
+    """
+    Scans for nearby MetaMotion BLE devices and returns their MAC addresses.
+
+    Args:
+        timeout (int): Duration of the BLE scan in seconds.
+
+    Returns:
+        List[str]: A list of MAC addresses (strings) corresponding to MetaWear devices.
+    """
+    log_system(f"[MetaMotion Scanner] Starting BLE scan for {timeout} seconds...")
+    mac_list = []
+
+    scanner = Scanner()
+    devices = scanner.scan(timeout)
+
+    for dev in devices:
+        name = dev.getValueText(9)  # 9 = Complete Local Name
+        if name == "MetaWear":
+            log_system(f"[MetaMotion Scanner] Found MetaWear at {dev.addr}")
+            mac_list.append(dev.addr)
+
+    if not mac_list:
+        log_system("[MetaMotion Scanner] No MetaWear devices found.", level="WARNING")
+
+    return mac_list
 
 class MetaMotionThread(threading.Thread):
     """
