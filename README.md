@@ -109,7 +109,8 @@ progetto_stopme/
 
 ├── core/                          # Core logic and coordination
 │   ├── event_dispatcher.py        # Reads events and routes them to actuators
-│   ├── actuator_manager.py        # Manages actuator instances and mappings
+│   ├── actuator_manager.py        # Manages actuators instances and mappings
+│   ├── actuator_manager.py        # Manages sensors instances and mappings
 │   ├── activation_policy.py       # Defines logic for selecting which actuators to trigger
 
 ├── recognizers/                   # Sensor data interpreters (event recognition)
