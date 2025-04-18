@@ -13,8 +13,9 @@ ensuring each step is testable and doesn't break existing functionality.
 - [x] Test each actuator module independently
 
 ### PHASE 2 – Core Actuator Coordination
-- [ ] Create `core/actuator_manager.py` to manage actuator instances and trigger calls
-- [ ] Integrate logger actuator into ActuatorManager for event logging
+- [ ] Create `core/actuator_manager.py` to manage actuators instances and trigger calls
+- [ ] Create `core/sensor_manager.py` to manage sensors instances and event calls
+- [ ] Integrate logger actuator into ActuatorManager and SensorManager for event logging
 
 ### PHASE 3 – Event Recognition Logic
 - [ ] Implement `recognizers/temperature.py` with multiple thresholds and state memory
