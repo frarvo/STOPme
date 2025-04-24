@@ -1,4 +1,3 @@
-
 # recognizers/temperature.py
 # Recognizer module for temperature-based event classification
 #
