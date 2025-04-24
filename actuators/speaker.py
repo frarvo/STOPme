@@ -7,14 +7,16 @@
 # License: MIT
 
 import threading
-from playsound import playsound
-from utils.config import get_speaker_config
-
 import subprocess
 import time
+from playsound import playsound
 from utils.logger import log_system
+from utils.config import get_speaker_config
+from utils.lock import device_reconnection_lock
 
-def scan_speaker_devices(timeout: int = 5) -> list[str]:
+speaker_config = get_speaker_config()
+
+def scan_speaker_devices(timeout: int = speaker_config.get('scan_timeout')) -> list[str]:
     """
     Scans for nearby Bluetooth speakers using bluetoothctl and returns a list of MAC addresses.
 
@@ -107,8 +109,7 @@ class SpeakerThread(threading.Thread):
         self.file = None
         self.connected = False
 
-        speaker_config = get_speaker_config()
-        self.timeout = speaker_config.get("timeout", 5)
+
         self.fast_retry_attempts = speaker_config.get("fast_retry_attempts", 5)
         self.retry_interval = speaker_config.get("retry_interval", 5)
         self.retry_sleep = speaker_config.get("retry_sleep", 60)
@@ -119,11 +120,10 @@ class SpeakerThread(threading.Thread):
         """
         log_system(f"[Speaker: {self.mac_address}] Thread started")
 
-        self._reconnection_attempts()
-
         while not self.stop_event.is_set():
             if not self._is_connected():
-                self._reconnection_attempts()
+                with device_reconnection_lock:
+                    self._reconnection_attempts()
 
             if self.event.is_set() and self.connected:
                 try:
@@ -168,7 +168,7 @@ class SpeakerThread(threading.Thread):
         try:
             result = subprocess.run(
                 ["bluetoothctl", "connect", self.mac_address],
-                capture_output=True, text=True, timeout=self.timeout
+                capture_output=True, text=True, timeout=10
             )
             if "Connection successful" in result.stdout:
                 self.connected = True
@@ -237,4 +237,3 @@ class SpeakerThread(threading.Thread):
                 log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
                 return
             log_system(f"[Speaker: {self.mac_address}] Slow retry failed", level="WARNING")
-

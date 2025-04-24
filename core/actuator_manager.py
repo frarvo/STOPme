@@ -14,7 +14,7 @@ from actuators.led_strip import scan_led_devices, LedThread
 from actuators.metamotion import scan_metamotion_devices, MetaMotionThread
 from actuators.speaker import scan_speaker_devices, SpeakerThread
 from utils.logger import log_system
-from utils.lock import bluetooth_scan_lock
+from utils.lock import device_scan_lock
 
 class ActuatorManager:
     """
@@ -39,7 +39,7 @@ class ActuatorManager:
         log_system("[ActuatorManager] Starting actuator scan and initialization.")
 
         # Bluetooth scan protected by global lock
-        with bluetooth_scan_lock:
+        with device_scan_lock:
             speaker_addresses = scan_speaker_devices(5)
             time.sleep(2)
             metamotion_addresses = scan_metamotion_devices(5)

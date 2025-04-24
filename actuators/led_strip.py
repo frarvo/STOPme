@@ -12,10 +12,10 @@ from typing import Optional, Tuple, List
 
 import flux_led
 from flux_led import BulbScanner
-from flux_led.pattern import PresetPattern
 
 from utils.logger import log_system
 from utils.config import get_led_strip_config
+from utils.lock import device_reconnection_lock
 
 # Device scanning function
 
@@ -97,7 +97,8 @@ class LedThread(threading.Thread):
 
             if self._disconnect_event.is_set():
                 self._disconnect_event.clear()
-                self._reconnection_attempts()
+                with device_reconnection_lock:
+                    self._reconnection_attempts()
 
             if self._bulb:
                 self._process_action()
@@ -118,11 +119,11 @@ class LedThread(threading.Thread):
 
     def _connection_feedback(self) -> None:
         try:
-            self._bulb.setRgbw(255, 255, 255, 0, brightness=50)
+            self._bulb.setRgbw(0, 0, 0, 255, brightness=50)
             time.sleep(0.3)
             self._bulb.setRgbw(0, 0, 0, 0)
             time.sleep(0.2)
-            self._bulb.setRgbw(255, 255, 255, 0, brightness=50)
+            self._bulb.setRgbw(0, 0, 0, 255, brightness=50)
             time.sleep(0.3)
             self._bulb.setRgbw(0, 0, 0, 0)
         except Exception:

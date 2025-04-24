@@ -16,7 +16,11 @@ from utils.config import get_metamotion_config
 from utils.logger import log_system
 from bluepy.btle import Scanner
 
-def scan_metamotion_devices(timeout: int = 5) -> list[str]:
+from utils.lock import device_reconnection_lock
+
+meta_config = get_metamotion_config()
+
+def scan_metamotion_devices(timeout: int = meta_config.get('scan_timeout')) -> list[str]:
     """
     Scans for nearby MetaMotion BLE devices and returns their MAC addresses.
 
@@ -72,7 +76,7 @@ class MetaMotionThread(threading.Thread):
         self.vibration_duty = 100
         self.vibration_time = 500
         self.device = None
-        meta_config = get_metamotion_config()
+
         self.fast_retry_attempts = meta_config.get("fast_retry_attempts", 10)
         self.retry_interval = meta_config.get("retry_interval", 5)
         self.retry_sleep = meta_config.get("retry_sleep", 60)
@@ -132,7 +136,8 @@ class MetaMotionThread(threading.Thread):
 
             if self.disconnect_event.is_set():
                 self.disconnect_event.clear()
-                self._reconnection_attempts()
+                with device_reconnection_lock:
+                    self._reconnection_attempts()
 
             if self.device.is_connected:
                 self._process_vibration()
