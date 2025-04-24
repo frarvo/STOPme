@@ -20,6 +20,7 @@ ensuring each step is testable and doesn't break existing functionality.
 ### PHASE 3 – Event Recognition Logic
 - [ ] Implement `recognizers/temperature.py` with multiple thresholds and state memory
 - [ ] Implement `recognizers/activity.py` as numeric → semantic mapper
+- [ ] Refactor `sensors/bluecoin.py` to only handle BLE connection and data forwarding
 
 ### PHASE 4 – Sensor Input Refactor
 - [ ] Implement `sensors/feature_listener.py` as generic listener with recognizer support
@@ -30,6 +31,5 @@ ensuring each step is testable and doesn't break existing functionality.
 - [ ] Implement `core/event_dispatcher.py` that connects events to actuators through policy
 
 ### PHASE 6 – Final Refactor
-- [ ] Refactor `sensors/bluecoin.py` to only handle BLE connection and data forwarding
 - [ ] Use listener + recognizer architecture for each feature
 - [ ] Link BlueCoin threads to dispatcher logic
