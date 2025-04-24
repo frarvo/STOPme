@@ -1,3 +1,11 @@
+# config.py
+# Extract configuration variables from config.yaml file to python
+#
+# Author: Francesco Urru
+# GitHub: https://github.com/frarvo
+# Repository: https://github.com/frarvo/STOPme
+# License: MIT
+
 import yaml
 from pathlib import Path
 from os.path import expanduser
@@ -56,3 +64,15 @@ def get_led_strip_config() -> dict:
     :return:
     """
     return CONFIG.get("led_strip", {})
+
+# BLUECOIN
+def get_bluecoin_config() -> dict:
+    """
+    Returns the BlueCoin configuration list of dictionary from config.yaml
+    :return:
+    """
+    return CONFIG.get("bluecoins", [])
+
+
+
+

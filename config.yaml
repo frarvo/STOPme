@@ -12,27 +12,27 @@ metamotion:
   retry_sleep: 60             # Wait time between subsequent retries
 
 speaker:
-  scan_timeout: 5              # First scan duration in seconds
-  fast_retry_attempts: 5       # Number of fast retries after a disconnection
-  retry_interval: 30           # Wait time between fast retries
-  retry_sleep: 120             # Wait time between subsequent retries
-
-led_strip:
   scan_timeout: 5             # First scan duration in seconds
   fast_retry_attempts: 5      # Number of fast retries after a disconnection
-  retry_interval: 5          # Wait time between fast retries
+  retry_interval: 10           # Wait time between fast retries
   retry_sleep: 60            # Wait time between subsequent retries
 
-thresholds:
-  temperature:
-    low: 25
-    high: 32
-    critical: 38
+led_strip:
+  scan_timeout: 10            # First scan duration in seconds
+  fast_retry_attempts: 5      # Number of fast retries after a disconnection
+  retry_interval: 5           # Wait time between fast retries
+  retry_sleep: 60             # Wait time between subsequent retries
 
-devices:
-  BC1:
-    mac: AA:BB:CC:DD:EE:FF
-    type: activity
-  BC2:
-    mac: 11:22:33:44:55:66
-    type: temperature
+bluecoins:
+  - id: bc_temp
+    feature: temperature
+    thresholds:
+      low: 30
+      medium: 32
+      high: 34
+
+  - id: bc_activity
+    feature: activity
+
+  - id: bc_inertial
+    feature: inertial
