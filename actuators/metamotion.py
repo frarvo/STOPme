@@ -13,7 +13,7 @@ import time
 from mbientlab.metawear import MetaWear, libmetawear
 from mbientlab.warble import WarbleException
 from utils.config import get_metamotion_config
-from actuators.logger import log_system
+from utils.logger import log_system
 from bluepy.btle import Scanner
 
 def scan_metamotion_devices(timeout: int = 5) -> list[str]:

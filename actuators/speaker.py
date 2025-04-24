@@ -7,15 +7,12 @@
 # License: MIT
 
 import threading
-import subprocess
-import time
 from playsound import playsound
-from actuators.logger import log_system
 from utils.config import get_speaker_config
 
 import subprocess
 import time
-from actuators.logger import log_system
+from utils.logger import log_system
 
 def scan_speaker_devices(timeout: int = 5) -> list[str]:
     """

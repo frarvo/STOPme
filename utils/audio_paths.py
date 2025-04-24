@@ -7,7 +7,7 @@
 # License: MIT
 
 from pathlib import Path
-from actuators.logger import log_system
+from utils.logger import log_system
 
 class AudioLibrary:
     """

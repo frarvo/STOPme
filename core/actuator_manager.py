@@ -13,7 +13,7 @@ from typing import Dict
 from actuators.led_strip import scan_led_devices, LedThread
 from actuators.metamotion import scan_metamotion_devices, MetaMotionThread
 from actuators.speaker import scan_speaker_devices, SpeakerThread
-from actuators.logger import log_system
+from utils.logger import log_system
 from utils.lock import bluetooth_scan_lock
 
 class ActuatorManager:

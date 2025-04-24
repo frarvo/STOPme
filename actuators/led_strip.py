@@ -14,7 +14,7 @@ import flux_led
 from flux_led import BulbScanner
 from flux_led.pattern import PresetPattern
 
-from actuators.logger import log_system
+from utils.logger import log_system
 from utils.config import get_led_strip_config
 
 # Device scanning function
