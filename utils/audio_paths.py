@@ -36,5 +36,5 @@ class AudioLibrary:
             return path
         raise AttributeError(f"[AudioLibrary] Unknown audio key: '{name}'")
 
-# Singleton istanza
+# Singleton instance
 AudioLibrary = AudioLibrary()
