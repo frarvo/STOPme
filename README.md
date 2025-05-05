@@ -110,7 +110,7 @@ progetto_stopme/
 ├── core/                          # Core logic and coordination
 │   ├── event_dispatcher.py        # Reads events and routes them to actuators
 │   ├── actuator_manager.py        # Manages actuators instances and mappings
-│   ├── actuator_manager.py        # Manages sensors instances and mappings
+│   ├── sensor_manager.py        # Manages sensors instances and mappings
 │   ├── activation_policy.py       # Defines logic for selecting which actuators to trigger
 
 ├── recognizers/                   # Sensor data interpreters (event recognition)
@@ -121,7 +121,6 @@ progetto_stopme/
 │   ├── led_strip.py               # Controls LED patterns
 │   ├── speaker.py                 # Plays audio via Bluetooth speaker
 │   ├── metawear.py                # Handles MetaMotion connection and vibration
-│   └── logger.py                  # Logs sensor events and triggered actuations
 
 ├── sensors/                       # BLE device interface and data acquisition
 │   ├── bluecoin.py                # Manages BlueCoin device connections and data
@@ -130,6 +129,8 @@ progetto_stopme/
 ├── utils/                         # Utility functions and helpers
 │   └── config.py                  # Manages general configuration, paths and timeouts
 │   └── audio_paths.py             # Manages file paths, names
+│   └── logger.py                  # Logs sensor events and triggered actuations
+│   └── lock.py                    # Contains global thread-safety locks
 
 ├── assets/                        # Audio, visual, or external resources
 │   └── audio/                     # Audio alerts in mp3 format
