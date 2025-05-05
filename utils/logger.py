@@ -101,14 +101,13 @@ def log_system(message: str, level: str = "INFO"):
 
     if debug_system_console_enabled():
         print(line.strip())
-        
+
     if not system_log_enabled():
         return
 
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
     filepath = folder / "System_Log.log"
-    
+
     with open(filepath, "a") as f:
         f.write(line)
-
