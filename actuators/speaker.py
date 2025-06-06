@@ -12,6 +12,7 @@ import time
 from playsound import playsound
 from utils.logger import log_system
 from utils.config import get_speaker_config
+from utils.audio_paths import AudioLibrary
 from utils.lock import device_reconnection_lock
 
 speaker_config = get_speaker_config()
@@ -173,6 +174,7 @@ class SpeakerThread(threading.Thread):
             if "Connection successful" in result.stdout:
                 self.connected = True
                 log_system(f"[Speaker: {self.mac_address}] Connected successfully")
+                self._connection_feedback()
             else:
                 log_system(f"[Speaker: {self.mac_address}] Connection failed: {result.stdout}", level="WARNING")
                 self.connected = False
@@ -191,6 +193,7 @@ class SpeakerThread(threading.Thread):
             )
             self.connected = False
             log_system(f"[Speaker: {self.mac_address}] Disconnected")
+            self._disconnection_feedback()
         except Exception as e:
             log_system(f"[Speaker: {self.mac_address}] Exception during disconnection: {e}", level="ERROR")
 
@@ -237,3 +240,15 @@ class SpeakerThread(threading.Thread):
                 log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
                 return
             log_system(f"[Speaker: {self.mac_address}] Slow retry failed", level="WARNING")
+
+    def _connection_feedback(self):
+        """
+        Plays a voice line to confirm connection to the device.
+        """
+        self.execute(file=AudioLibrary.SPEAKER_CONNECT)
+
+    def _disconnection_feedback(self):
+        """
+        Plays a voice line to confirm disconnection to the device.
+        """
+        self.execute(file=AudioLibrary.SPEAKER_DISCONNECT)

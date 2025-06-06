@@ -220,6 +220,10 @@ class MetaMotionThread(threading.Thread):
         """
         log_system(f"[MetaMotion: {self.mac_address}] Starting reconnection procedure.")
 
+        # Recreate the device object
+        self.device = MetaWear(self.mac_address)
+        self.device.on_disconnect = lambda status: self._on_disconnection(status)
+
         # Phase 1: fast retries
         for attempt in range(self.fast_retry_attempts):
             if self.stop_event.is_set():
@@ -227,6 +231,7 @@ class MetaMotionThread(threading.Thread):
             try:
                 self.device.connect()
                 log_system(f"[MetaMotion: {self.mac_address}] Reconnected successfully.")
+                self._connection_feedback()
                 return
             except Exception as e:
                 log_system(f"[MetaMotion: {self.mac_address}] Retry {attempt + 1}/{self.fast_retry_attempts} failed: {e}", level="ERROR")

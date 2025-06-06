@@ -25,30 +25,32 @@ class ActuatorManager:
     """
 
     def __init__(self):
-        """
-        Initializes the actuator manager with an empty actuator registry.
-        """
         self.actuators: Dict[str, threading.Thread] = {}
+        self.speaker_addresses = []
+        self.metamotion_addresses = []
+        self.led_addresses = []
         log_system("[ActuatorManager] Initialized")
 
-    def scan_and_initialize(self):
+    def scan_actuators(self):
         """
-        Scans for available actuator devices (LED, MetaMotion, Speaker),
-        creates their threads, and starts them.
+        Scans all types of actuator devices and stores their addresses.
         """
-        log_system("[ActuatorManager] Starting actuator scan and initialization.")
-
-        # Bluetooth scan protected by global lock
+        log_system("[ActuatorManager] Scanning for all actuator devices...")
         with device_scan_lock:
-            speaker_addresses = scan_speaker_devices(5)
+            self.speaker_addresses = scan_speaker_devices(5)
             time.sleep(2)
-            metamotion_addresses = scan_metamotion_devices(5)
+            self.metamotion_addresses = scan_metamotion_devices(5)
             time.sleep(2)
-            led_addresses = scan_led_devices(10)
+            self.led_addresses = scan_led_devices(10)
             time.sleep(2)
 
-        # Creates speaker threads
-        for mac in speaker_addresses:
+    def initialize_actuators(self):
+        """
+        Initializes all actuator threads using previously scanned addresses.
+        """
+        log_system("[ActuatorManager] Initializing all actuator devices...")
+
+        for mac in self.speaker_addresses:
             actuator_id = f"speaker_{mac}"
             thread = SpeakerThread(mac)
             thread.start()
@@ -56,8 +58,7 @@ class ActuatorManager:
             log_system(f"[ActuatorManager] Speaker initialized: {actuator_id}")
             time.sleep(2)
 
-        # Creates metamotion threads
-        for mac in metamotion_addresses:
+        for mac in self.metamotion_addresses:
             actuator_id = f"meta_{mac}"
             thread = MetaMotionThread(mac)
             thread.start()
@@ -65,8 +66,7 @@ class ActuatorManager:
             log_system(f"[ActuatorManager] MetaMotion initialized: {actuator_id}")
             time.sleep(2)
 
-        # Creates LED threads
-        for ip in led_addresses:
+        for ip in self.led_addresses:
             actuator_id = f"led_{ip}"
             thread = LedThread(ip)
             thread.start()
@@ -74,7 +74,7 @@ class ActuatorManager:
             log_system(f"[ActuatorManager] LED initialized: {actuator_id}")
             time.sleep(2)
 
-        log_system("[ActuatorManager] Actuators initialization complete")
+        log_system("[ActuatorManager] Initialization complete")
 
     def trigger(self, actuator_id: str, action_type: str, **kwargs):
         """
@@ -96,6 +96,13 @@ class ActuatorManager:
             log_system(f"[ActuatorManager] Triggered action on {actuator_id}: {kwargs}")
         except Exception as e:
             log_system(f"[ActuatorManager] Error triggering actuator {actuator_id}: {e}", level="ERROR")
+
+    def get_actuators_ids(self):
+        """
+        Returns all registered actuator IDs
+        :return:
+        """
+        return list(self.actuators.keys())
 
     def stop_all(self):
         """

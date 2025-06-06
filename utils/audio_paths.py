@@ -22,7 +22,13 @@ class AudioLibrary:
         "WALKING_FAST" : "walking_fast.mp3",
         "RUNNING" : "running.mp3",
         "TEMPERATURE_DOWN" : "temperature_down.mp3",
-        "TEMPERATURE_UP" : "temperature_up.mp3"
+        "TEMPERATURE_UP" : "temperature_up.mp3",
+        "SPEAKER_CONNECT" : "speaker_connected.mp3",
+        "SPEAKER_DISCONNECT": "speaker_disconnected.mp3",
+        "TEMPERATURE_LOW": "temperature_low.mp3",
+        "TEMPERATURE_MEDIUM": "temperature_medium.mp3",
+        "TEMPERATURE_HIGH": "temperature_high.mp3",
+        "TEMPERATURE_CRITICAL": "temperature_critical.mp3"
     }
 
     def __getattr__(self, name):
