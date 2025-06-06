@@ -1,4 +1,4 @@
-# STOPme  
+# STOPme 1.0
 Modular Python system for real-time feedback using wireless BLE sensors and actuators.
 
 STOPme is a modular and extensible Python system designed to connect wireless BLE wearable sensors and multisensory actuators to create real-time, responsive feedback based on physical activity, temperature, and future sensor-derived events.
