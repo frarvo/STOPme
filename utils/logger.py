@@ -141,7 +141,7 @@ def log_event(timestamp: str,
     """
     global _last_event_timestamp, _last_event_file, _last_event_line_idx
 
-    # 1) Determina i percorsi di cartella e file per il source attuale
+    # Determines path folder for current source device
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
 
@@ -151,12 +151,12 @@ def log_event(timestamp: str,
     csv_filename = f"Event_Diary_{source}.csv"
     csv_path = folder / csv_filename
 
-    # 2) Converte il timestamp passato in datetime
+    # Convert timestam to datetime format
     now = datetime.fromisoformat(timestamp)
     date_str = now.strftime("%d-%m-%Y")
     time_str = now.strftime("%H:%M:%S")
 
-    # 3) Costruisce la stringa di attuazioni come prima
+    # Build actuation string
     actions = []
     for action in actuations:
         target_name = action["target"].upper()
@@ -169,34 +169,31 @@ def log_event(timestamp: str,
         actions.append(formatted)
     action_str = ", ".join(actions)
 
-    # ------------------------------------------------------------------------
-    # 4) Retroactive update su file .log e .csv del precedente evento,
-    #    qualunque fosse il source passato la volta scorsa
+    # Retroactive update of previous events on files .log e .csv to add duration
     if _last_event_timestamp is not None and _last_event_file is not None:
-        # Calcola durata = now – _last_event_timestamp
+        # duration = now – _last_event_timestamp
         delta = now - _last_event_timestamp
         total_seconds = int(delta.total_seconds())
         minutes = total_seconds // 60
         seconds = total_seconds % 60
         duration_str = f"{minutes:02d}:{seconds:02d}"
 
-        # --- Retroactive update .log del file in cui era stato scritto l’ultima volta ---
+        # Retroactive update .log
         prev_log_path = _last_event_file
         with open(prev_log_path, "r") as f_log:
             log_lines = f_log.readlines()
 
-        # Aggiunge " - Durata: mm:ss" alla riga _last_event_line_idx
+        # Add " - Duration: mm:ss" to the line _last_event_line_idx
         old_log_line = log_lines[_last_event_line_idx].rstrip("\n")
         log_lines[_last_event_line_idx] = old_log_line + f" - Duration: {duration_str}\n"
 
         with open(prev_log_path, "w") as f_log:
             f_log.writelines(log_lines)
 
-        # --- Retroactive update .csv del file corrispondente ---
-        # Calcola il percorso CSV corrispondente a prev_log_path
+        # Retroactive update .csv
+        # Prepare CSV path relative to prev_log_path
         prev_csv_path = prev_log_path.with_suffix(".csv")
 
-        # Se non esiste, lo creiamo con header
         if not prev_csv_path.exists():
             header = "date,timestamp,feature,event,actuation,duration\n"
             with open(prev_csv_path, "w") as f_csv:
@@ -205,8 +202,8 @@ def log_event(timestamp: str,
         with open(prev_csv_path, "r") as f_csv:
             csv_lines = f_csv.readlines()
 
-        # Le righe dati del CSV partono dall’indice 1 (0 è header),
-        # quindi la riga da aggiornare è _last_event_line_idx + 1
+        # Data line on a csv file start from index 1. Index 0 is the header.
+        # Line to modify: _last_event_line_idx + 1
         prev_csv_idx = _last_event_line_idx + 1
         old_csv_line = csv_lines[prev_csv_idx].rstrip("\n")
         csv_lines[prev_csv_idx] = old_csv_line + f",{duration_str}\n"
@@ -214,8 +211,7 @@ def log_event(timestamp: str,
         with open(prev_csv_path, "w") as f_csv:
             f_csv.writelines(csv_lines)
 
-    # ------------------------------------------------------------------------
-    # 5) Ora: append della riga corrente nel file .log (senza durata)
+    # Append to .log file without duration
     line_txt = f"[{date_str} {time_str}] - {feature_type.upper()} - {event} - {action_str}\n"
     with open(log_path, "a") as f_log:
         f_log.write(line_txt)
@@ -223,28 +219,20 @@ def log_event(timestamp: str,
     if debug_event_console_enabled():
         print(line_txt.strip())
 
-    # ------------------------------------------------------------------------
-    # 6) Append della riga corrente nel file .csv, lasciando il campo duration vuoto
+    # 6) Append to .csv file without duration
     if not csv_path.exists():
         header = "date,timestamp,feature,event,actuation,duration\n"
         with open(csv_path, "w") as f_csv:
             f_csv.write(header)
-        # Prima riga di dati, duration vuoto
         csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
     else:
-        # File già esistente: basta appendare i dati con durata vuota
         csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
 
     with open(csv_path, "a") as f_csv:
         f_csv.write(csv_line)
-
-    # ------------------------------------------------------------------------
-    # 7) Aggiorna le variabili globali per l’evento appena scritto
+        
+    # Update global variables
     _last_event_timestamp = now
-
-    # L’evento corrente è stato scritto alla fine di log_path: l’indice di riga 0-based
-    # è pari al numero di righe presenti prima, che è len(log_lines) se log_lines esiste,
-    # altrimenti 0 se log_lines non era definito (primo evento di sempre o di file nuovo).
     try:
         prev_count = len(log_lines)
     except NameError:
