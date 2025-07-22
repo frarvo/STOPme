@@ -14,22 +14,22 @@ ensuring each step is testable and doesn't break existing functionality.
 
 ### PHASE 2 – Core Actuator Coordination
 - [x] Create `core/actuator_manager.py` to manage actuators instances and trigger calls
-- [ ] Create `core/sensor_manager.py` to manage sensors instances and event calls
-- [ ] Integrate logger actuator into ActuatorManager and SensorManager for event logging
+- [x] Create `core/sensor_manager.py` to manage sensors instances and event calls
+- [x] Integrate logger actuator into ActuatorManager and SensorManager for event logging
 
 ### PHASE 3 – Event Recognition Logic
-- [ ] Implement `recognizers/temperature.py` with multiple thresholds and state memory
-- [ ] Implement `recognizers/activity.py` as numeric → semantic mapper
-- [ ] Refactor `sensors/bluecoin.py` to only handle BLE connection and data forwarding
+- [x] Implement `recognizers/temperature.py` with multiple thresholds and state memory
+- [x] Implement `recognizers/activity.py` as numeric → semantic mapper
+- [x] Refactor `sensors/bluecoin.py` to only handle BLE connection and data forwarding
 
 ### PHASE 4 – Sensor Input Refactor
-- [ ] Implement `sensors/feature_listener.py` as generic listener with recognizer support
-- [ ] Update listener to insert structured events (with timestamp) into the event queue
+- [x] Implement `sensors/feature_listener.py` as generic listener with recognizer support
+- [x] Update listener to insert structured events (with timestamp) into the event queue
 
 ### PHASE 5 – Core Dispatch & Logic
-- [ ] Implement `core/activation_policy.py` with internal decision logic
-- [ ] Implement `core/event_dispatcher.py` that connects events to actuators through policy
+- [x] Implement `core/activation_policy.py` with internal decision logic
+- [x] Implement `core/event_dispatcher.py` that connects events to actuators through policy
 
 ### PHASE 6 – Final Refactor
-- [ ] Use listener + recognizer architecture for each feature
-- [ ] Link BlueCoin threads to dispatcher logic
+- [x] Use listener + recognizer architecture for each feature
+- [x] Link BlueCoin threads to dispatcher logic
