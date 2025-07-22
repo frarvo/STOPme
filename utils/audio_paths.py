@@ -28,7 +28,8 @@ class AudioLibrary:
         "TEMPERATURE_LOW": "temperature_low.mp3",
         "TEMPERATURE_MEDIUM": "temperature_medium.mp3",
         "TEMPERATURE_HIGH": "temperature_high.mp3",
-        "TEMPERATURE_CRITICAL": "temperature_critical.mp3"
+        "TEMPERATURE_CRITICAL": "temperature_critical.mp3",
+        "MISSING_FILE": "missing_audio_file.mp3"
     }
 
     def __getattr__(self, name):
@@ -39,6 +40,7 @@ class AudioLibrary:
             path = self._base_path / self._files[name]
             if not path.exists():
                 log_system(f"[AudioLibrary] Missing audio file: {path}", level="WARNING")
+                return self._base_path / self._files["MISSING_FILE"]
             return path
         raise AttributeError(f"[AudioLibrary] Unknown audio key: '{name}'")
 

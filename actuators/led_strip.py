@@ -88,22 +88,19 @@ class LedThread(threading.Thread):
 
     def _wait_for_event(self) -> None:
         while not self._stop_event.is_set():
-            self._event.wait()
+            if self._event.wait(timeout=0.5):
+                self._event.clear()
 
-            if self._stop_event.is_set():
+                if self._disconnect_event.is_set():
+                    self._disconnect_event.clear()
+                    with device_reconnection_lock:
+                        self._reconnection_attempts()
+
                 if self._bulb:
-                    self._turn_off()
-                break
+                    self._process_action()
 
-            if self._disconnect_event.is_set():
-                self._disconnect_event.clear()
-                with device_reconnection_lock:
-                    self._reconnection_attempts()
-
-            if self._bulb:
-                self._process_action()
-
-            self._event.clear()
+        if self._bulb:
+            self._turn_off()
 
     def _connect(self) -> None:
         while not self._stop_event.is_set():
@@ -197,5 +194,6 @@ class LedThread(threading.Thread):
     def stop(self) -> None:
         self._stop_event.set()
         self._event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
         log_system(f"[LedStrip: {self.ip_address}] Thread stopped")

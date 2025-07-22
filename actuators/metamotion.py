@@ -76,6 +76,7 @@ class MetaMotionThread(threading.Thread):
         self.vibration_duty = 100
         self.vibration_time = 500
         self.device = None
+        self.vibration_lock = threading.Lock()
 
         self.fast_retry_attempts = meta_config.get("fast_retry_attempts", 10)
         self.retry_interval = meta_config.get("retry_interval", 5)
@@ -127,22 +128,19 @@ class MetaMotionThread(threading.Thread):
         :return:
         """
         while not self.stop_event.is_set():
-            self.event.wait()
+            if self.event.wait(timeout=0.5):
+                self.event.clear()
 
-            if self.stop_event.is_set():
-                if self.device and self.device.is_connected:
-                    self._disconnect_device()
-                break
+                if self.disconnect_event.is_set():
+                    self.disconnect_event.clear()
+                    with device_reconnection_lock:
+                        self._reconnection_attempts()
 
-            if self.disconnect_event.is_set():
-                self.disconnect_event.clear()
-                with device_reconnection_lock:
-                    self._reconnection_attempts()
+                if self.device.is_connected:
+                    self._process_vibration()
 
-            if self.device.is_connected:
-                self._process_vibration()
-
-            self.event.clear()
+        if self.device and self.device.is_connected:
+            self._disconnect_device()
 
     def _process_vibration(self):
         """
@@ -150,8 +148,11 @@ class MetaMotionThread(threading.Thread):
         :return:
         """
         if self.device.is_connected:
-            log_system(f"[MetaMotion: {self.mac_address}] Vibrating {self.vibration_time}ms at {self.vibration_duty}%")
-            libmetawear.mbl_mw_haptic_start_motor(self.device.board, self.vibration_duty, self.vibration_time)
+            with self.vibration_lock:
+                duty = self.vibration_duty
+                duration = self.vibration_time
+            log_system(f"[MetaMotion: {self.mac_address}] Vibrating {duration}ms at {duty}%")
+            libmetawear.mbl_mw_haptic_start_motor(self.device.board, duty, duration)
 
     def set_vibration(self, duty_cycle: int, time_ms: int):
         """
@@ -160,8 +161,9 @@ class MetaMotionThread(threading.Thread):
         :param time_ms: (int) Duration of the vibration in milliseconds.
         :return:
         """
-        self.vibration_duty = duty_cycle
-        self.vibration_time = time_ms
+        with self.vibration_lock:
+            self.vibration_duty = duty_cycle
+            self.vibration_time = time_ms
         self.event.set()
 
     def stop(self):
@@ -171,7 +173,8 @@ class MetaMotionThread(threading.Thread):
         """
         self.stop_event.set()
         self.event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
         log_system(f"[MetaMotion: {self.mac_address}] Thread stopped.")
 
     def _disconnect_device(self):

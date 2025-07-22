@@ -23,12 +23,6 @@ def get_log_path():
     """
     return str(Path(expanduser(CONFIG["log_base_path"])))
 
-def get_thresholds(sensor_type):
-    return CONFIG["thresholds"].get(sensor_type, {})
-
-def get_device_config(device_id):
-    return CONFIG["devices"].get(device_id, {})
-
 def actuation_details_enabled() -> bool:
     return CONFIG.get("log_actuation_details", True)
 

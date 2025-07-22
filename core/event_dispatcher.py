@@ -8,6 +8,7 @@
 
 import threading
 from utils.event_queue import get_activity_queue, get_temperature_queue
+import queue
 
 
 class EventDispatcher:
@@ -49,25 +50,31 @@ class EventDispatcher:
         self._temperature_thread.join()
 
     def _process_activity_events(self):
-        queue = get_activity_queue()
+        q = get_activity_queue()
         while not self._stop_event.is_set():
-            event = queue.get()
-            result = self.activity_policy.handle(event)
-            if result:
-                self.actuator_manager.trigger(
-                    actuator_id=result["actuator_id"],
-                    action_type="temperature_event",
-                    **result["params"]
-                )
+            try:
+                event = q.get(timeout=0.5)
+                result = self.activity_policy.handle(event)
+                if result:
+                    self.actuator_manager.trigger(
+                        actuator_id=result["actuator_id"],
+                        action_type="activity_event",
+                        **result["params"]
+                    )
+            except queue.Empty:
+                continue
 
     def _process_temperature_events(self):
-        queue = get_temperature_queue()
+        q = get_temperature_queue()
         while not self._stop_event.is_set():
-            event = queue.get()
-            result = self.temperature_policy.handle(event)
-            if result:
-                self.actuator_manager.trigger(
-                    actuator_id=result["actuator_id"],
-                    action_type="activity_event",
-                    **result["params"]
-                )
+            try:
+                event = q.get()
+                result = self.temperature_policy.handle(event)
+                if result:
+                    self.actuator_manager.trigger(
+                        actuator_id=result["actuator_id"],
+                        action_type="temperature_event",
+                        **result["params"]
+                    )
+            except queue.Empty:
+                continue

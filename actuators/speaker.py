@@ -9,6 +9,7 @@
 import threading
 import subprocess
 import time
+from pathlib import Path
 from playsound import playsound
 from utils.logger import log_system
 from utils.config import get_speaker_config
@@ -128,8 +129,11 @@ class SpeakerThread(threading.Thread):
 
             if self.event.is_set() and self.connected:
                 try:
-                    log_system(f"[Speaker: {self.mac_address}] Playing audio: {self.file}")
-                    playsound(self.file)
+                    if self.file and Path(self.file).exists():
+                        log_system(f"[Speaker: {self.mac_address}] Playing audio: {self.file}")
+                        playsound(self.file)
+                    else:
+                        log_system(f"[Speaker: {self.mac_address}] File not found or invalid: {self.file}", level="WARNING")
                 except Exception as e:
                     log_system(f"[Speaker: {self.mac_address}] Error during audio playback: {e}", level="ERROR")
                 finally:
@@ -159,7 +163,8 @@ class SpeakerThread(threading.Thread):
         """
         self.stop_event.set()
         self.event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
         log_system(f"[Speaker: {self.mac_address}] Thread stopped")
 
     def _connect(self):

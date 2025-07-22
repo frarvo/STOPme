@@ -61,7 +61,7 @@ class TemperatureRecognizer:
 
             self.queue.put({
                 "type": "temperature",
-                "value": state,
+                "event": state,
                 "source": self.source,
                 "timestamp": timestamp
             })

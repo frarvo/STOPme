@@ -62,7 +62,7 @@ class ActivityRecognizer:
 
         self.queue.put({
             "type": "activity",
-            "value": self.label,
+            "event": self.label,
             "source": self.source,
             "timestamp": timestamp
         })

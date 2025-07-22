@@ -28,7 +28,11 @@ class TemperatureFeatureListener(FeatureListener):
 
     def on_update(self, feature, sample):
         try:
-            temperature = sample.get_data()[0]
+            data = sample.get_data()
+            if not data:
+                log_system(f"[Temperature Listener: {self.sensor_id}] Empty sample data", level="WARNING")
+                return
+            temperature = data[0]
             #log_system(f"[Temperature Listener: {self.sensor_id}] Received: {temperature:.2f}°C")
             self.recognizer.process(value=temperature)
         except Exception as e:
@@ -53,7 +57,11 @@ class ActivityFeatureListener(FeatureListener):
 
     def on_update(self, feature, sample):
         try:
-            activity_code = sample.get_data()[0]
+            data = sample.get_data()
+            if not data:
+                log_system(f"[Activity Listener: {self.sensor_id}] Empty sample data", level="WARNING")
+                return
+            activity_code = data[0]
             #log_system(f"[Activity Listener: {self.sensor_id}] Activity code: {activity_code}")
             self.recognizer.process(activity_class = activity_code)
         except Exception as e:

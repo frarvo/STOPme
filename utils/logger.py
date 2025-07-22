@@ -172,7 +172,7 @@ def log_event(timestamp: str,
     # ------------------------------------------------------------------------
     # 4) Retroactive update su file .log e .csv del precedente evento,
     #    qualunque fosse il source passato la volta scorsa
-    if _last_event_timestamp is not None and _last_event_file is not None:
+    if _last_event_timestamp is not None and _last_event_file is not None and _last_event_line_idx is not None:
         # Calcola durata = now – _last_event_timestamp
         delta = now - _last_event_timestamp
         total_seconds = int(delta.total_seconds())

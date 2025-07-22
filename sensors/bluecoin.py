@@ -137,7 +137,8 @@ class BlueCoinThread(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
         log_system(f"[BlueCoin Thread: {self.device_id}] Thread stopped.")
 
     def _cleanup(self):
