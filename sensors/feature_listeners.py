@@ -29,14 +29,16 @@ class TemperatureFeatureListener(FeatureListener):
     def on_update(self, feature, sample):
         try:
             data = sample.get_data()
-            if not data:
-                log_system(f"[Temperature Listener: {self.sensor_id}] Empty sample data", level="WARNING")
+            #print(f"[DEBUG] Data type: {type(data)} | Data: {data}")
+            if not data or not isinstance(data, list) or len(data) < 1:
+                log_system(f"[Temperature Listener: {self.sensor_id}] Invalid sample data: {data}", level="WARNING")
                 return
             temperature = data[0]
             #log_system(f"[Temperature Listener: {self.sensor_id}] Received: {temperature:.2f}°C")
             self.recognizer.process(value=temperature)
         except Exception as e:
-            log_system(f"[Temperature Listener: {self.sensor_id}] Error: {e}", level="ERROR")
+            import traceback
+            log_system(f"[Temperature Listener: {self.sensor_id}] Exception: {type(e).__name__}: {e}\n{traceback.format_exc()}", level="ERROR")
 
 
 class ActivityFeatureListener(FeatureListener):
@@ -58,11 +60,15 @@ class ActivityFeatureListener(FeatureListener):
     def on_update(self, feature, sample):
         try:
             data = sample.get_data()
-            if not data:
-                log_system(f"[Activity Listener: {self.sensor_id}] Empty sample data", level="WARNING")
+            #print(f"[DEBUG] Data type: {type(data)} | Data: {data}")
+            if not data or not isinstance(data, list) or len(data) < 1:
+                log_system(f"[Activity Listener: {self.sensor_id}] Invalid sample data: {data}", level="WARNING")
                 return
             activity_code = data[0]
             #log_system(f"[Activity Listener: {self.sensor_id}] Activity code: {activity_code}")
             self.recognizer.process(activity_class = activity_code)
         except Exception as e:
-            log_system(f"[Activity Listener: {self.sensor_id}] Error: {e}", level="ERROR")
+            import traceback
+            log_system(
+                f"[Temperature Listener: {self.sensor_id}] Exception: {type(e).__name__}: {e}\n{traceback.format_exc()}",
+                level="ERROR")

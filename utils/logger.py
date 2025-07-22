@@ -1,24 +1,22 @@
-# logger.py
-# Actuator module for logging both sensor events and internal system state
-#
-# Author: Francesco Urru
-# GitHub: https://github.com/frarvo
-# Repository: https://github.com/frarvo/STOPme
-# License: MIT
-
 import os
 from datetime import datetime
 from pathlib import Path
-from utils.config import get_log_path, actuation_details_enabled, system_log_enabled, debug_system_console_enabled, debug_event_console_enabled
+from utils.config import (
+    get_log_path,
+    actuation_details_enabled,
+    system_log_enabled,
+    debug_system_console_enabled,
+    debug_event_console_enabled
+)
 
 def _ensure_dir(path: Path):
-    """Ensures that a given directory path exists. Creates it if it doesn't exist."""
+    """Ensure a directory exists, create it if needed."""
     os.makedirs(path, exist_ok=True)
 
 def _get_day_folder(base_dir: Path) -> Path:
     """
-    Returns the path to the log directory named after today's date (DD-MM-YYYY).
-    Creates the directory if it does not exist.
+    Return today's log directory as a Path.
+    Create the directory if it doesn't exist.
     """
     day_folder = datetime.now().strftime("%d-%m-%Y")
     full_path = base_dir / day_folder
@@ -27,46 +25,35 @@ def _get_day_folder(base_dir: Path) -> Path:
 
 def log_events(timestamp: str, feature_type: str, event: str, actuations: list, source: str):
     """
-    Logs a sensor event with its duration and triggered actuations into both .log and .csv formats.
+    Log a sensor event to both .log and .csv files.
 
     Parameters:
-        timestamp (str): timestamp of the event
+        timestamp (str): ISO8601 timestamp
         feature_type (str): e.g., 'temperature', 'activity'
-        event (str): semantic event value (e.g., 'WALKING', 'TEMP_HIGH')
+        event (str): e.g., 'WALKING', 'TEMP_HIGH'
         actuations (list): list of dicts with 'target' and 'params'
-        source (str): e.g., 'BC_Temperature', 'BC_Activity_Recognition'
+        source (str): sensor name, e.g., 'BC_Temperature'
     """
-
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
 
     date_str = datetime.fromisoformat(timestamp).strftime("%d-%m-%Y")
     time_str = datetime.fromisoformat(timestamp).strftime("%H:%M:%S")
 
-    # ACTUATION STRING
-    # actions = list of actuators and their parameters
     actions = []
     for action in actuations:
-        target_name = action["target"].upper() #target is the actuator. e.g. LED, METAMOTION, SPEAKER
-
+        target_name = action["target"].upper()
         if actuation_details_enabled():
-            # if event details enabled creates a string (formatted) with actuation type and parameters
-            params = action.get("params", {}) # dict with params of a single actuator
-            param_str = ", ".join(f"{key}={value}" for key,value in params.items()) # turn dict params into string
+            params = action.get("params", {})
+            param_str = ", ".join(f"{key}={value}" for key, value in params.items())
             formatted = f"{target_name}({param_str})"
         else:
-            # else the string contains only the actuator name
             formatted = target_name
-
         actions.append(formatted)
-
     action_str = ", ".join(actions)
 
-
-    # LOG FILE
     log_filename = f"Event_Diary_{source}.log"
     log_path = folder / log_filename
-
     line_txt = f"[{date_str} {time_str}] - {feature_type.upper()} - {event} - {action_str}\n"
 
     with open(log_path, "a") as f:
@@ -75,7 +62,6 @@ def log_events(timestamp: str, feature_type: str, event: str, actuations: list, 
     if debug_event_console_enabled():
         print(line_txt.strip())
 
-    # CSV FILE
     csv_filename = f"Event_Diary_{source}.csv"
     csv_path = folder / csv_filename
     header = "date,timestamp,feature,event,actuation\n"
@@ -89,13 +75,12 @@ def log_events(timestamp: str, feature_type: str, event: str, actuations: list, 
 
 def log_system(message: str, level: str = "INFO"):
     """
-    Logs a system-level message into 'System_Log.log' in the folder of the day.
+    Log a system-level message to the system log file.
 
     Parameters:
-        message (str): The message to log
-        level (str): Logging level (INFO, WARNING, ERROR)
+        message (str): Log message
+        level (str): One of 'INFO', 'WARNING', 'ERROR'
     """
-
     date = datetime.now().strftime("%d-%m-%Y")
     time = datetime.now().strftime("%H:%M:%S")
     line = f"[{date} {time}] - {level.upper()} - {message}\n"
@@ -113,50 +98,39 @@ def log_system(message: str, level: str = "INFO"):
     with open(filepath, "a") as f:
         f.write(line)
 
-
-# Global variables to track the last logged event
 _last_event_timestamp: datetime = None
 _last_event_file: Path = None
 _last_event_line_idx: int = None
 
-
-# LOG event with duration
 def log_event(timestamp: str,
               feature_type: str,
               event: str,
               actuations: list,
               source: str):
     """
-    Registra un evento (senza durate) in due file: .log e .csv.
-    Retroattivamente aggiorna l’evento precedente (nel file dove era stato scritto)
-    aggiungendo la sua durata, calcolata come differenza tra il timestamp
-    attuale e quello dell’ultimo evento, indipendentemente dal source.
+    Log a new sensor event to file, and retroactively add duration to the previous one if it exists.
 
-    Parametri:
-        timestamp (str): stringa ISO8601, es. "2025-06-06T10:38:16"
-        feature_type (str): es. 'temperature' o 'activity'
-        event (str): es. 'WALKING', 'TEMP_HIGH', ecc.
-        actuations (list): lista di dict con chiavi 'target' e 'params'
-        source (str): nome del sensore, es. 'BC_Temperature' o 'BC_Activity_Recognition'
+    Parameters:
+        timestamp (str): ISO8601 timestamp
+        feature_type (str): 'temperature' or 'activity'
+        event (str): event label
+        actuations (list): list of dicts with 'target' and 'params'
+        source (str): e.g. 'BC_Temperature'
     """
     global _last_event_timestamp, _last_event_file, _last_event_line_idx
 
-    # 1) Determina i percorsi di cartella e file per il source attuale
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
 
     log_filename = f"Event_Diary_{source}.log"
     log_path = folder / log_filename
-
     csv_filename = f"Event_Diary_{source}.csv"
     csv_path = folder / csv_filename
 
-    # 2) Converte il timestamp passato in datetime
     now = datetime.fromisoformat(timestamp)
     date_str = now.strftime("%d-%m-%Y")
     time_str = now.strftime("%H:%M:%S")
 
-    # 3) Costruisce la stringa di attuazioni come prima
     actions = []
     for action in actuations:
         target_name = action["target"].upper()
@@ -169,53 +143,47 @@ def log_event(timestamp: str,
         actions.append(formatted)
     action_str = ", ".join(actions)
 
-    # ------------------------------------------------------------------------
-    # 4) Retroactive update su file .log e .csv del precedente evento,
-    #    qualunque fosse il source passato la volta scorsa
-    if _last_event_timestamp is not None and _last_event_file is not None and _last_event_line_idx is not None:
-        # Calcola durata = now – _last_event_timestamp
-        delta = now - _last_event_timestamp
-        total_seconds = int(delta.total_seconds())
-        minutes = total_seconds // 60
-        seconds = total_seconds % 60
-        duration_str = f"{minutes:02d}:{seconds:02d}"
+    if (_last_event_timestamp is not None and
+        _last_event_file is not None and
+        _last_event_line_idx is not None):
 
-        # --- Retroactive update .log del file in cui era stato scritto l’ultima volta ---
         prev_log_path = _last_event_file
         with open(prev_log_path, "r") as f_log:
             log_lines = f_log.readlines()
 
-        # Aggiunge " - Durata: mm:ss" alla riga _last_event_line_idx
-        old_log_line = log_lines[_last_event_line_idx].rstrip("\n")
-        log_lines[_last_event_line_idx] = old_log_line + f" - Duration: {duration_str}\n"
+        if 0 <= _last_event_line_idx < len(log_lines):
+            delta = now - _last_event_timestamp
+            total_seconds = int(delta.total_seconds())
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            duration_str = f"{minutes:02d}:{seconds:02d}"
 
-        with open(prev_log_path, "w") as f_log:
-            f_log.writelines(log_lines)
+            old_log_line = log_lines[_last_event_line_idx].rstrip("\n")
+            log_lines[_last_event_line_idx] = old_log_line + f" - Duration: {duration_str}\n"
 
-        # --- Retroactive update .csv del file corrispondente ---
-        # Calcola il percorso CSV corrispondente a prev_log_path
-        prev_csv_path = prev_log_path.with_suffix(".csv")
+            with open(prev_log_path, "w") as f_log:
+                f_log.writelines(log_lines)
 
-        # Se non esiste, lo creiamo con header
-        if not prev_csv_path.exists():
-            header = "date,timestamp,feature,event,actuation,duration\n"
-            with open(prev_csv_path, "w") as f_csv:
-                f_csv.write(header)
+            prev_csv_path = prev_log_path.with_suffix(".csv")
+            if not prev_csv_path.exists():
+                header = "date,timestamp,feature,event,actuation,duration\n"
+                with open(prev_csv_path, "w") as f_csv:
+                    f_csv.write(header)
 
-        with open(prev_csv_path, "r") as f_csv:
-            csv_lines = f_csv.readlines()
+            with open(prev_csv_path, "r") as f_csv:
+                csv_lines = f_csv.readlines()
 
-        # Le righe dati del CSV partono dall’indice 1 (0 è header),
-        # quindi la riga da aggiornare è _last_event_line_idx + 1
-        prev_csv_idx = _last_event_line_idx + 1
-        old_csv_line = csv_lines[prev_csv_idx].rstrip("\n")
-        csv_lines[prev_csv_idx] = old_csv_line + f",{duration_str}\n"
+            prev_csv_idx = _last_event_line_idx + 1
+            if 0 <= prev_csv_idx < len(csv_lines):
+                old_csv_line = csv_lines[prev_csv_idx].rstrip("\n")
+                csv_lines[prev_csv_idx] = old_csv_line + f",{duration_str}\n"
+                with open(prev_csv_path, "w") as f_csv:
+                    f_csv.writelines(csv_lines)
+            else:
+                log_system("[logger] CSV line index out of range; skipping duration update", level="WARNING")
+        else:
+            log_system("[logger] Log line index out of range; skipping duration update", level="WARNING")
 
-        with open(prev_csv_path, "w") as f_csv:
-            f_csv.writelines(csv_lines)
-
-    # ------------------------------------------------------------------------
-    # 5) Ora: append della riga corrente nel file .log (senza durata)
     line_txt = f"[{date_str} {time_str}] - {feature_type.upper()} - {event} - {action_str}\n"
     with open(log_path, "a") as f_log:
         f_log.write(line_txt)
@@ -223,32 +191,24 @@ def log_event(timestamp: str,
     if debug_event_console_enabled():
         print(line_txt.strip())
 
-    # ------------------------------------------------------------------------
-    # 6) Append della riga corrente nel file .csv, lasciando il campo duration vuoto
     if not csv_path.exists():
         header = "date,timestamp,feature,event,actuation,duration\n"
         with open(csv_path, "w") as f_csv:
             f_csv.write(header)
-        # Prima riga di dati, duration vuoto
         csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
     else:
-        # File già esistente: basta appendare i dati con durata vuota
         csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
 
     with open(csv_path, "a") as f_csv:
         f_csv.write(csv_line)
 
-    # ------------------------------------------------------------------------
-    # 7) Aggiorna le variabili globali per l’evento appena scritto
-    _last_event_timestamp = now
-
-    # L’evento corrente è stato scritto alla fine di log_path: l’indice di riga 0-based
-    # è pari al numero di righe presenti prima, che è len(log_lines) se log_lines esiste,
-    # altrimenti 0 se log_lines non era definito (primo evento di sempre o di file nuovo).
     try:
-        prev_count = len(log_lines)
-    except NameError:
+        with open(log_path, "r") as f:
+            log_lines = f.readlines()
+        prev_count = len(log_lines) - 1
+    except Exception:
         prev_count = 0
 
+    _last_event_timestamp = now
     _last_event_file = log_path
     _last_event_line_idx = prev_count
