@@ -17,18 +17,12 @@ class AudioLibrary:
 
     _base_path = Path(__file__).resolve().parent.parent / "assets" / "audio"
     _files = {
-        "STATIONARY" : "stationary.mp3",
-        "WALKING" : "walking.mp3",
-        "WALKING_FAST" : "walking_fast.mp3",
-        "RUNNING" : "running.mp3",
-        "TEMPERATURE_DOWN" : "temperature_down.mp3",
-        "TEMPERATURE_UP" : "temperature_up.mp3",
-        "SPEAKER_CONNECT" : "speaker_connected.mp3",
-        "SPEAKER_DISCONNECT": "speaker_disconnected.mp3",
-        "TEMPERATURE_LOW": "temperature_low.mp3",
-        "TEMPERATURE_MEDIUM": "temperature_medium.mp3",
-        "TEMPERATURE_HIGH": "temperature_high.mp3",
-        "TEMPERATURE_CRITICAL": "temperature_critical.mp3",
+        "DANGEROUS_ITA": "dangerous_stereotipy_ita.mp3",
+        "NON_DANGEROUS_ITA": "non_dangerous_stereotipy_ita.mp3",
+        "NON_STEREOTIPY_ITA": "no_stereotipy_ita.mp3",
+        "DANGEROUS_ENG": "dangerous_stereotipy_eng.mp3",
+        "NON_DANGEROUS_ENG": "non_dangerous_stereotipy_eng.mp3",
+        "NON_STEREOTIPY_ENG": "no_stereotipy_eng.mp3",
         "MISSING_FILE": "missing_audio_file.mp3"
     }
 

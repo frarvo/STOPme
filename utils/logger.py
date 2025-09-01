@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
+from utils.lock import logging_lock
 from utils.config import (
     get_log_path,
     actuation_details_enabled,
@@ -56,8 +57,9 @@ def log_events(timestamp: str, feature_type: str, event: str, actuations: list, 
     log_path = folder / log_filename
     line_txt = f"[{date_str} {time_str}] - {feature_type.upper()} - {event} - {action_str}\n"
 
-    with open(log_path, "a") as f:
-        f.write(line_txt)
+    with logging_lock:
+        with open(log_path, "a") as f:
+            f.write(line_txt)
 
     if debug_event_console_enabled():
         print(line_txt.strip())
@@ -68,10 +70,11 @@ def log_events(timestamp: str, feature_type: str, event: str, actuations: list, 
     line_csv = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\"\n"
 
     write_header = not csv_path.exists()
-    with open(csv_path, "a") as f:
-        if write_header:
-            f.write(header)
-        f.write(line_csv)
+    with logging_lock:
+        with open(csv_path, "a") as f:
+            if write_header:
+                f.write(header)
+            f.write(line_csv)
 
 def log_system(message: str, level: str = "INFO"):
     """
@@ -148,8 +151,9 @@ def log_event(timestamp: str,
         _last_event_line_idx is not None):
 
         prev_log_path = _last_event_file
-        with open(prev_log_path, "r") as f_log:
-            log_lines = f_log.readlines()
+        with logging_lock:
+            with open(prev_log_path, "r") as f_log:
+                log_lines = f_log.readlines()
 
         if 0 <= _last_event_line_idx < len(log_lines):
             delta = now - _last_event_timestamp
@@ -161,50 +165,58 @@ def log_event(timestamp: str,
             old_log_line = log_lines[_last_event_line_idx].rstrip("\n")
             log_lines[_last_event_line_idx] = old_log_line + f" - Duration: {duration_str}\n"
 
-            with open(prev_log_path, "w") as f_log:
-                f_log.writelines(log_lines)
+            with logging_lock:
+                with open(prev_log_path, "w") as f_log:
+                    f_log.writelines(log_lines)
 
             prev_csv_path = prev_log_path.with_suffix(".csv")
             if not prev_csv_path.exists():
                 header = "date,timestamp,feature,event,actuation,duration\n"
-                with open(prev_csv_path, "w") as f_csv:
-                    f_csv.write(header)
 
-            with open(prev_csv_path, "r") as f_csv:
-                csv_lines = f_csv.readlines()
+                with logging_lock:
+                    with open(prev_csv_path, "w") as f_csv:
+                        f_csv.write(header)
+
+            with logging_lock:
+                with open(prev_csv_path, "r") as f_csv:
+                    csv_lines = f_csv.readlines()
 
             prev_csv_idx = _last_event_line_idx + 1
             if 0 <= prev_csv_idx < len(csv_lines):
                 old_csv_line = csv_lines[prev_csv_idx].rstrip("\n")
                 csv_lines[prev_csv_idx] = old_csv_line + f",{duration_str}\n"
-                with open(prev_csv_path, "w") as f_csv:
-                    f_csv.writelines(csv_lines)
+                with logging_lock:
+                    with open(prev_csv_path, "w") as f_csv:
+                        f_csv.writelines(csv_lines)
             else:
                 log_system("[logger] CSV line index out of range; skipping duration update", level="WARNING")
         else:
             log_system("[logger] Log line index out of range; skipping duration update", level="WARNING")
 
     line_txt = f"[{date_str} {time_str}] - {feature_type.upper()} - {event} - {action_str}\n"
-    with open(log_path, "a") as f_log:
-        f_log.write(line_txt)
+    with logging_lock:
+        with open(log_path, "a") as f_log:
+            f_log.write(line_txt)
 
     if debug_event_console_enabled():
         print(line_txt.strip())
 
     if not csv_path.exists():
         header = "date,timestamp,feature,event,actuation,duration\n"
-        with open(csv_path, "w") as f_csv:
-            f_csv.write(header)
-        csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
-    else:
-        csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
+        with logging_lock:
+            with open(csv_path, "w") as f_csv:
+                f_csv.write(header)
 
-    with open(csv_path, "a") as f_csv:
-        f_csv.write(csv_line)
+    csv_line = f"{date_str},{time_str},{feature_type},{event},\"{action_str}\",\n"
+
+    with logging_lock:
+        with open(csv_path, "a") as f_csv:
+            f_csv.write(csv_line)
 
     try:
-        with open(log_path, "r") as f:
-            log_lines = f.readlines()
+        with logging_lock:
+            with open(log_path, "r") as f:
+                log_lines = f.readlines()
         prev_count = len(log_lines) - 1
     except Exception:
         prev_count = 0

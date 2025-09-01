@@ -10,4 +10,6 @@ import threading
 
 device_scan_lock = threading.Lock()
 device_connection_lock = threading.Lock()
-device_reconnection_lock = threading.Lock()
+device_reconnection_lock = threading.RLock()
+
+logging_lock = threading.Lock()

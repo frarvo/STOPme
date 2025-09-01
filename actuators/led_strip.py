@@ -164,7 +164,20 @@ class LedThread(threading.Thread):
     ) -> None:
         """Trigger an effect or solid color on the LED strip."""
         self._pattern = pattern
-        self._color = color
+        # Clamp color channels to 0..255
+        if color is not None:
+            try:
+                r, g, b, w = color
+                r = max(0, min(int(r), 255))
+                g = max(0, min(int(g), 255))
+                b = max(0, min(int(b), 255))
+                w = max(0, min(int(w), 255))
+                self._color = (r, g, b, w)
+            except Exception:
+                self._color = None
+        else:
+            self._color = None
+
         self._intensity = max(0, min(intensity, 100))
         self._speed = max(1, min(speed, 100))
         self._event.set()
@@ -181,12 +194,20 @@ class LedThread(threading.Thread):
 
         except Exception as exc:
             log_system(f"[LedStrip: {self.ip_address}] Action error: {exc}", level="ERROR")
+            self._disconnect_event.set()
+            self._event.set()
 
     def _turn_off(self) -> None:
         try:
             if self._bulb:
-                self._bulb.turnOff()
-                self.execute(color=(0,0,0,0))
+                try:
+                    self._bulb.turnOff()
+                except Exception as e:
+                    log_system(f"[LedStrip: {self.ip_address}] turnOff() failed: {e}")
+                try:
+                    self._bulb.setRgbw(0,0,0,0, brightness=0)
+                except Exception:
+                    pass
                 log_system(f"[LedStrip: {self.ip_address}] Turned off")
         except Exception as exc:
             log_system(f"[LedStrip: {self.ip_address}] TurnOff error: {exc}", level="ERROR")

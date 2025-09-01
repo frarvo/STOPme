@@ -113,7 +113,7 @@ progetto_stopme/
 │   ├── sensor_manager.py        # Manages sensors instances and mappings
 │   ├── activation_policy.py       # Defines logic for selecting which actuators to trigger
 
-├── recognizers/                   # Sensor data interpreters (event recognition)
+├── data_pipeline/                   # Sensor data interpreters (event recognition)
 │   ├── activity.py                # Maps activity feature values to semantic events
 │   └── temperature.py             # Detects threshold crossings and emits events
 
@@ -124,7 +124,7 @@ progetto_stopme/
 
 ├── sensors/                       # BLE device interface and data acquisition
 │   ├── bluecoin.py                # Manages BlueCoin device connections and data
-│   └── feature_listener.py        # Generic listener that uses recognizers
+│   └── feature_listener.py        # Generic listener that uses data_pipeline
 
 ├── utils/                         # Utility functions and helpers
 │   └── config.py                  # Manages general configuration, paths and timeouts

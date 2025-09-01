@@ -101,12 +101,15 @@ class MetaMotionThread(threading.Thread):
         self.device = MetaWear(addr)
         self.device.on_disconnect = lambda status: self._on_disconnection(status)
 
-        while not self.device.is_connected:
+        while not getattr(self.device, "is_connected", False):
+            if self.stop_event.is_set():
+                return
             try:
                 self.device.connect()
                 time.sleep(1)
             except WarbleException as e:
                 log_system(f"[MetaMotion: {addr}] Connection failed: {e}", level="ERROR")
+                time.sleep(self.retry_interval)
 
         log_system(f"[MetaMotion: {addr}] Connected successfully")
         self._connection_feedback()
@@ -116,10 +119,14 @@ class MetaMotionThread(threading.Thread):
         Executes a brief double vibration sequence to confirm successful connection to the device.
         :return:
         """
-        libmetawear.mbl_mw_haptic_start_motor(self.device.board, 100, 200)
-        time.sleep(0.250)
-        libmetawear.mbl_mw_haptic_start_motor(self.device.board, 100, 200)
-        time.sleep(1)
+        try:
+            libmetawear.mbl_mw_haptic_start_motor(self.device.board, 100, 200)
+            time.sleep(0.250)
+            libmetawear.mbl_mw_haptic_start_motor(self.device.board, 100, 200)
+            time.sleep(1)
+        except Exception:
+            # Doesn't raise exception during shutdown
+            pass
 
     def _wait_for_event(self):
         """
@@ -136,10 +143,10 @@ class MetaMotionThread(threading.Thread):
                     with device_reconnection_lock:
                         self._reconnection_attempts()
 
-                if self.device.is_connected:
+                if self.device and getattr(self.device, "is_connected", False):
                     self._process_vibration()
 
-        if self.device and self.device.is_connected:
+        if self.device and getattr(self.device, "is_connected", False):
             self._disconnect_device()
 
     def _process_vibration(self):
@@ -147,12 +154,15 @@ class MetaMotionThread(threading.Thread):
         Triggers the vibration motor using the current duty cycle and duration time.
         :return:
         """
-        if self.device.is_connected:
-            with self.vibration_lock:
-                duty = self.vibration_duty
-                duration = self.vibration_time
-            log_system(f"[MetaMotion: {self.mac_address}] Vibrating {duration}ms at {duty}%")
-            libmetawear.mbl_mw_haptic_start_motor(self.device.board, duty, duration)
+        try:
+            if self.device and getattr(self.device, "is_connected", False):
+                with self.vibration_lock:
+                    duty = max(0, min(int(self.vibration_duty), 100))
+                    duration = max(1, int(self.vibration_time))
+                log_system(f"[MetaMotion: {self.mac_address}] Vibrating {duration}ms at {duty}%")
+                libmetawear.mbl_mw_haptic_start_motor(self.device.board, duty, duration)
+        except Exception:
+            pass
 
     def set_vibration(self, duty_cycle: int, time_ms: int):
         """
@@ -173,6 +183,13 @@ class MetaMotionThread(threading.Thread):
         """
         self.stop_event.set()
         self.event.set()
+        # Prevent callbacks during shutdown
+        try:
+            if self.device:
+                self.device.on_disconnect = None
+        except Exception:
+            pass
+
         if self.is_alive():
             self.join()
         log_system(f"[MetaMotion: {self.mac_address}] Thread stopped.")
@@ -183,9 +200,17 @@ class MetaMotionThread(threading.Thread):
         :return:
         """
         try:
-            if self.device and self.device.is_connected:
-                self.device.disconnect()
-                log_system(f"[MetaMotion: {self.mac_address}] Disconnected manually")
+            if self.device:
+                # Disable callbacks before disconnect to avoid teardown races
+                try:
+                    self.device.on_disconnect = None
+                except Exception:
+                    pass
+
+                if getattr(self.device, "is_connected", False):
+                    self.device.disconnect()
+                    log_system(f"[MetaMotion: {self.mac_address}] Disconnected manually")
+
         except Exception as e:
             log_system(f"[MetaMotion: {self.mac_address}] Disconnection error: {e}", level="ERROR")
 
@@ -238,7 +263,10 @@ class MetaMotionThread(threading.Thread):
                 return
             except Exception as e:
                 log_system(f"[MetaMotion: {self.mac_address}] Retry {attempt + 1}/{self.fast_retry_attempts} failed: {e}", level="ERROR")
-                time.sleep(self.retry_interval)
+                for _ in range(self.retry_interval):
+                    if self.stop_event.is_set():
+                        return
+                    time.sleep(1)
 
         # Phase 2: slow retries
         log_system(f"[MetaMotion: {self.mac_address}] All fast retries failed. Sleeping for {self.retry_sleep}s before retrying.")
@@ -246,7 +274,14 @@ class MetaMotionThread(threading.Thread):
             try:
                 self.device.connect()
                 log_system(f"[MetaMotion: {self.mac_address}] Reconnected successfully.")
+                try:
+                    self._connection_feedback()
+                except Exception:
+                    pass
                 return
             except Exception as e:
                 log_system(f"[MetaMotion: {self.mac_address}] Slow retry failed: {e}", level="WARNING")
-                time.sleep(self.retry_sleep)
+                for _ in range(self.retry_interval):
+                    if self.stop_event.is_set():
+                        return
+                    time.sleep(1)

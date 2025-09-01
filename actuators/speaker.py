@@ -123,17 +123,29 @@ class SpeakerThread(threading.Thread):
         log_system(f"[Speaker: {self.mac_address}] Thread started")
 
         while not self.stop_event.is_set():
-            if not self._is_connected():
+            is_conn = self._is_connected()
+            self.connected = is_conn
+            if not is_conn:
                 with device_reconnection_lock:
                     self._reconnection_attempts()
+                # Refresh status after each attempt
+                self.connected = self._is_connected()
 
             if self.event.is_set() and self.connected:
                 try:
-                    if self.file and Path(self.file).exists():
-                        log_system(f"[Speaker: {self.mac_address}] Playing audio: {self.file}")
-                        playsound(self.file)
+                    if self.file:
+                        p = Path(self.file)
+                        if p.exists():
+                            # Check stop and connection before playing to avoid blocking
+                            if not self.stop_event.is_set() and self._is_connected():
+                                log_system(f"[Speaker: {self.mac_address}] Playing audio: {p}")
+                                playsound(str(p))
+                            else:
+                                log_system(f"[Speaker: {self.mac_address}] Skipping playback (stopping or disconnected)", level="WARNING")
+                        else:
+                            log_system(f"[Speaker: {self.mac_address}] File not found or invalid: {self.file}", level="WARNING")
                     else:
-                        log_system(f"[Speaker: {self.mac_address}] File not found or invalid: {self.file}", level="WARNING")
+                        log_system(f"[Speaker: {self.mac_address}] No audio file provided", level="WARNING")
                 except Exception as e:
                     log_system(f"[Speaker: {self.mac_address}] Error during audio playback: {e}", level="ERROR")
                 finally:
@@ -197,7 +209,6 @@ class SpeakerThread(threading.Thread):
                 capture_output=True, text=True
             )
             self.connected = False
-            log_system(f"[Speaker: {self.mac_address}] Disconnected")
             self._disconnection_feedback()
         except Exception as e:
             log_system(f"[Speaker: {self.mac_address}] Exception during disconnection: {e}", level="ERROR")
@@ -212,7 +223,8 @@ class SpeakerThread(threading.Thread):
                 ["bluetoothctl", "info", self.mac_address],
                 capture_output=True, text=True
             )
-            return "Connected: yes" in result.stdout
+            out = (result.stdout or "").lower() # case-insensitive
+            return "connected: yes" in out
         except Exception as e:
             log_system(f"[Speaker: {self.mac_address}] Error checking status: {e}", level="ERROR")
             return False
@@ -227,7 +239,8 @@ class SpeakerThread(threading.Thread):
         for attempt in range(self.fast_retry_attempts):
             if self.stop_event.is_set():
                 return
-            time.sleep(self.retry_interval)
+            if self.stop_event.wait(self.retry_interval):
+                return
             self._connect()
             if self.connected:
                 log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
@@ -239,7 +252,8 @@ class SpeakerThread(threading.Thread):
         # Slow retry loop
         log_system(f"[Speaker: {self.mac_address}] All fast retries failed. Retrying every {self.retry_sleep}s.")
         while not self.stop_event.is_set():
-            time.sleep(self.retry_sleep)
+            if self.stop_event.wait(self.retry_sleep):
+                return
             self._connect()
             if self.connected:
                 log_system(f"[Speaker: {self.mac_address}] Reconnected successfully.")
@@ -254,6 +268,7 @@ class SpeakerThread(threading.Thread):
 
     def _disconnection_feedback(self):
         """
-        Plays a voice line to confirm disconnection to the device.
+        Write on the system log to confirm disconnection to the device.
         """
-        self.execute(file=AudioLibrary.SPEAKER_DISCONNECT)
+        # Can't reproduce audio if already disconnected
+        log_system(f"[Speaker: {self.mac_address}] Disconnected", level="INFO")

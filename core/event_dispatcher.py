@@ -1,80 +1,96 @@
 # event_dispatcher.py
-# Dispatches recognized sensor events to the appropriate activation policy
+# Dispatches recognized sensor events to the activation policy
 # and triggers actions through the ActuatorManager
 #
 # Author: Francesco Urru
 # Repository: https://github.com/frarvo/STOPme
 # License: MIT
 
-import threading
-from utils.event_queue import get_activity_queue, get_temperature_queue
 import queue
+import threading
+from utils.event_queue import get_event_queue
+from utils.logger import log_system,log_event
 
+
+LABELS = {
+    0: "NO_CLASS",
+    1: "NON_DANGEROUS",
+    2: "DANGEROUS",
+    3: "NON_STEREOTIPY",
+}
 
 class EventDispatcher:
     """
-    Continuously listens to sensor event queues and dispatches actions via activation policies.
+    Creates a thread that consumes event queue and dispatches actions via activation policy.
     """
-
-    def __init__(self, actuator_manager, temperature_policy, activity_policy):
+    def __init__(self, actuator_manager, policy):
         """
         Initializes the dispatcher with actuator manager and activation policies.
-
         Args:
             actuator_manager: Instance of ActuatorManager for device control.
-            temperature_policy: Instance of TemperatureActivationPolicy.
-            activity_policy: Instance of ActivityActivationPolicy.
+            policy: chooses which actuator to activate
         """
         self.actuator_manager = actuator_manager
-        self.temperature_policy = temperature_policy
-        self.activity_policy = activity_policy
-
+        self.policy = policy
         self._stop_event = threading.Event()
-
-        self._activity_thread = threading.Thread(target=self._process_activity_events, daemon=True)
-        self._temperature_thread = threading.Thread(target=self._process_temperature_events, daemon=True)
+        self._thread = threading.Thread(target=self._process_events, daemon=True)
 
     def start(self):
         """
-        Starts the dispatcher threads for activity and temperature events.
+        Starts the thread.
         """
-        self._activity_thread.start()
-        self._temperature_thread.start()
+        self._thread.start()
+        log_system("[Dispatcher] Started.")
 
     def stop(self):
         """
-        Signals the dispatcher threads to terminate.
+        Signals the dispatcher thread to terminate.
         """
         self._stop_event.set()
-        self._activity_thread.join()
-        self._temperature_thread.join()
+        if self._thread.is_alive():
+            self._thread.join()
+        log_system("[Dispatcher] Stopped.")
 
-    def _process_activity_events(self):
-        q = get_activity_queue()
+    def _process_events(self):
+        q = get_event_queue()
         while not self._stop_event.is_set():
             try:
                 event = q.get(timeout=0.5)
-                result = self.activity_policy.handle(event)
-                if result:
-                    self.actuator_manager.trigger(
-                        actuator_id=result["actuator_id"],
-                        action_type="activity_event",
-                        **result["params"]
-                    )
             except queue.Empty:
                 continue
-
-    def _process_temperature_events(self):
-        q = get_temperature_queue()
-        while not self._stop_event.is_set():
             try:
-                event = q.get()
-                result = self.temperature_policy.handle(event)
-                if result:
-                    self.actuator_manager.trigger(
-                        actuator_id=result["actuator_id"],
-                        action_type="temperature_event",
-                        **result["params"]
-                    )
-            except queue.Empty:
-                continue
+                raw_tag = event.get("stereotipy_tag", "")
+                try:
+                    tag = int(raw_tag)
+                except Exception:
+                    tag = None
+                label = LABELS.get(tag, str(raw_tag))
+
+                # If gated (not calibrated) skip actuation but still log
+                gated = bool(event.get("gated", False))
+                result = None
+                actuations = []
+
+                if gated:
+                    log_system("[Dispatcher] Event gated (sensor not calibrated); Skipping actuation.")
+                else:
+                    result = self.policy.handle(event)
+                    if result:
+                        self.actuator_manager.trigger(
+                            actuator_id=result["actuator_id"],
+                            action_type="stereotipy_event",
+                            **result["params"]
+                        )
+                        actuations = [{"target": result["actuator_id"], "params": result["params"]}]
+                    else:
+                        log_system("[Dispatcher] Policy returned no action.")
+
+                log_event(
+                    timestamp=event.get("timestamp"),
+                    feature_type=event.get("type", "imu"),
+                    event=label,
+                    actuations=actuations,
+                    source=event.get("source", "dual_wrist")
+                )
+            except Exception as e:
+                log_system(f"[Dispatcher] Dispatch error: {e}", level="ERROR")

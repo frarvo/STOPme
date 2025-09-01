@@ -37,11 +37,11 @@ class ActuatorManager:
         """
         log_system("[ActuatorManager] Scanning for all actuator devices...")
         with device_scan_lock:
-            self.speaker_addresses = scan_speaker_devices(5)
+            self.speaker_addresses = scan_speaker_devices(5) or []
             time.sleep(2)
-            self.metamotion_addresses = scan_metamotion_devices(5)
+            self.metamotion_addresses = scan_metamotion_devices(5) or []
             time.sleep(2)
-            self.led_addresses = scan_led_devices(10)
+            self.led_addresses = scan_led_devices(10) or []
             time.sleep(2)
 
     def initialize_actuators(self):
@@ -92,6 +92,17 @@ class ActuatorManager:
             return
 
         try:
+            # Prevent actuation if device not connected
+            if actuator_id.startswith("speaker_"):
+                try:
+                    if hasattr(actuator, "_is_connected") and not actuator._is_connected():
+                        log_system(f"[ActuatorManager] Speaker not connected, skipping actuation", level="WARNING")
+                        return
+                except Exception:
+                    if getattr(actuator, "connected", False) is False:
+                        log_system(f"[ActuatorManager] Speaker not connected, skipping actuation", level="WARNING")
+                        return
+
             actuator.execute(**kwargs)
             log_system(f"[ActuatorManager] Triggered action on {actuator_id}: {kwargs}")
         except Exception as e:

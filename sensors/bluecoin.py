@@ -8,6 +8,8 @@
 
 import time
 import threading
+from typing import Sequence, List
+
 from blue_st_sdk.manager import Manager, ManagerListener
 from blue_st_sdk.node import NodeStatus, NodeListener
 from bluepy.btle import BTLEDisconnectError
@@ -21,8 +23,13 @@ class BlueCoinManagerListener(ManagerListener):
     def on_discovery_change(self, manager, enabled):
         log_system(f"[BlueCoin Scanner] Discovery {'started' if enabled else 'stopped'}.")
 
+
     def on_node_discovered(self, manager, node):
-        log_system(f"[BlueCoin Scanner] Found node: {node.get_name()} - {node.get_tag()}")
+        try:
+            log_system(f"[BlueCoin Scanner] Found node: {node.get_name()} - {node.get_tag()}")
+        except Exception:
+            log_system(f"[BlueCoin Scanner] Found node: (name/tag unavailable)")
+
 
 class BlueCoinNodeListener(NodeListener):
     """ Custom listener for BlueCoin Nodes. Logs events during BLE connections and disconnections. """
@@ -35,15 +42,12 @@ class BlueCoinNodeListener(NodeListener):
     def on_status_change(self, node, new_status, old_status):
         log_system(f"[BlueCoin node] Status changed from {old_status} to {new_status}")
 
+
 def scan_bluecoin_devices(timeout: int = 5) -> list:
     """
     Performs a BLE scan to discover nearby BlueCoin nodes.
-
-    Args:
-        timeout (int): Duration in seconds for the scan.
-
-    Returns:
-        list: List of compatible BlueCoin nodes discovered during the scan.
+    :param timeout: Duration in seconds for the scan.
+    :return: List of compatible BlueCoin nodes discovered during the scan.
     """
     nodes = []
 
@@ -57,6 +61,11 @@ def scan_bluecoin_devices(timeout: int = 5) -> list:
         nodes = manager.get_nodes()
     except Exception as e:
         log_system(f"[BlueCoin Scanner] Error during discovery: {e}", level="ERROR")
+    finally:
+        try:
+            manager.remove_listener(listener)
+        except Exception:
+            pass
 
     if not nodes:
         log_system("[BlueCoin Scanner] No BlueCoin devices found.", level="WARNING")
@@ -67,45 +76,90 @@ def scan_bluecoin_devices(timeout: int = 5) -> list:
 
 class BlueCoinThread(threading.Thread):
     """
-    Thread for managing a single BlueCoin device connection and feature listening.
-
+    Thread for managing connection to a single BlueCoin device with multiple features at the same time.
+    Features can be pass either as single instance or list.
     Attributes:
         node: BlueST Node object representing the BlueCoin device.
-        node_listener: Listener for connection and disconnection events.
-        feature_listener: Listener for feature updates.
-        feature: Feature to subscribe to.
-        device_id: Identifier string for logging purposes.
+        feature: Feature or list[Feature].
+        feature_listener: FeatureListener or list[FeatureListener]. Same length as feature.
+        device_id: Identifier string for the device.
     """
 
-    def __init__(self, node, feature, feature_listener, device_id):
+    def __init__(self, node, feature, feature_listener, device_id:str):
         super().__init__(daemon=True)
         self.node = node
         self.node_listener = BlueCoinNodeListener()
-        self.feature = feature
-        self.feature_listener = feature_listener
         self.device_id = device_id
         self.stop_event = threading.Event()
 
+        # Distinguish between single istance or list
+        if isinstance(feature, (list,tuple)):
+            self.features: List = list(feature)
+        else:
+            self.features: List = [feature]
+
+        if isinstance(feature_listener, (list,tuple)):
+            self.feature_listeners: List = list(feature_listener)
+        else:
+            self.feature_listeners: List = [feature_listener]
+
+        # Check length correspondence
+        if len(self.features) != len(self.feature_listeners):
+            raise ValueError("features and feature_listeners must have the same length")
+
+
+    # Thread lifecycle
     def run(self):
         log_system(f"[BlueCoin Thread: {self.device_id}] Thread started.")
         self._connect()
         self._start_notifications()
         self._listen()
 
+    def stop(self):
+        self.stop_event.set()
+        if self.is_alive():
+            self.join()
+        log_system(f"[BlueCoin Thread: {self.device_id}] Thread stopped.")
+
+    # Thread internals
     def _connect(self):
         self.node.add_listener(self.node_listener)
         while not self.node.connect():
+            if self.stop_event.is_set():
+                return
             log_system(f"[BlueCoin Thread: {self.device_id}] Connection failed, retrying...", level="WARNING")
-            time.sleep(1)
+            # 1 second interruptable wait
+            for _ in range(10):
+                if self.stop_event.is_set():
+                    return
+                time.sleep(0.1)
         log_system(f"[BlueCoin Thread: {self.device_id}] Connected successfully.")
-        self.feature.add_listener(self.feature_listener)
+        # Attach listeners for all features
+        for feature, listener in zip(self.features, self.feature_listeners):
+            try:
+                feature.add_listener(listener)
+            except Exception as e:
+                log_system(f"[BlueCoin Thread: {self.device_id}] add_listener error: {e}", level="ERROR")
 
     def _start_notifications(self):
-        self.node.enable_notifications(self.feature)
+        # Enable BLE notifications for all features
+        for feature in self.features:
+            try:
+                self.node.enable_notifications(feature)
+            except Exception as e:
+                log_system(f"[BlueCoin Thread: {self.device_id}] enable_notifications error: {e}", level="ERROR")
 
     def _stop_notifications(self):
-        self.node.disable_notifications(self.feature)
-        self.feature.remove_listener(self.feature_listener)
+        # Disable BLE notifications and remove listeners for all features
+        for feature, listener in zip(self.features, self.feature_listeners):
+            try:
+                self.node.disable_notifications(feature)
+            except Exception:
+                pass
+            try:
+                feature.remove_listener(listener)
+            except Exception:
+                pass
 
     def _listen(self):
         while not self.stop_event.is_set():
@@ -117,7 +171,9 @@ class BlueCoinThread(threading.Thread):
             except BTLEDisconnectError:
                 log_system(f"[BlueCoin Thread: {self.device_id}] BTLE exception caught", level="ERROR")
                 self._handle_reconnection()
-
+            except Exception as e:
+                log_system(f"BlueCoin Thread: {self.device_id}] wait_for_notifications error: {e}", level="ERROR")
+                self._handle_reconnection()
         self._cleanup()
 
     def _handle_reconnection(self):
@@ -128,21 +184,42 @@ class BlueCoinThread(threading.Thread):
                     log_system(f"[BlueCoin Thread: {self.device_id}] Attempting reconnection...")
                     if self.node.connect():
                         log_system(f"[BlueCoin Thread: {self.device_id}] Reconnected successfully.")
-                        self.feature.add_listener(self.feature_listener)
+                        # Reattach listeners and re-enable notifications on reconnection
+                        for feature, listener in zip(self.features, self.feature_listeners):
+                            try:
+                                feature.add_listener(listener)
+                            except Exception:
+                                pass
                         self._start_notifications()
                         return
                 except BTLEDisconnectError:
                     log_system(f"[BlueCoin Thread: {self.device_id}] Reconnection failed, retrying...", level="WARNING")
-                time.sleep(2)
+                except Exception as e:
+                    log_system(f"[BlueCoin Thread: {self.device_id}] Reconnection error: {e}", level="ERROR")
+                # 2 seconds interruptable wait
+                for _ in range(20):
+                    if self.stop_event.is_set():
+                        return
+                    time.sleep(0.1)
 
-    def stop(self):
-        self.stop_event.set()
-        if self.is_alive():
-            self.join()
-        log_system(f"[BlueCoin Thread: {self.device_id}] Thread stopped.")
+
 
     def _cleanup(self):
-        self._stop_notifications()
-        if self.node.get_status() == NodeStatus.CONNECTED:
+        try:
+            self._stop_notifications()
+        except Exception:
+            # Doesn't raise exception during shutdown
+            pass
+        # Remove listener before disconnect
+        try:
             self.node.disconnect()
-            log_system(f"[BlueCoin Thread: {self.device_id}] Disconnected cleanly.")
+        except Exception:
+            # Doesn't raise exception during shutdown
+            pass
+        try:
+            if self.node.get_status() == NodeStatus.CONNECTED:
+                self.node.disconnect()
+                log_system(f"[BlueCoin Thread: {self.device_id}] Disconnected cleanly.")
+        except Exception:
+            # Doesn't raise exception during shutdown
+            pass
