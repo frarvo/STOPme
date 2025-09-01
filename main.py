@@ -60,7 +60,7 @@ def main():
     # Extract actuator lists
     actuators_list = actuator_manager.get_actuators_ids()
     if not actuators_list:
-        log_system("[MAIN] No actuators discovered.")
+        log_system("[MAIN] No actuators discovered. Event detection and logging still executing")
 
     # Instantiate activation policy
     policy = StereotipyActivationPolicy(actuator_ids=actuators_list)
