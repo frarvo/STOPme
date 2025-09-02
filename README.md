@@ -1,15 +1,15 @@
 # STOPme 1.0
 Modular Python system for real-time feedback using wireless BLE sensors and actuators.
 
-STOPme is a modular and extensible Python system designed to connect wireless BLE wearable sensors and multisensory actuators to create real-time, responsive feedback based on physical activity, temperature, and future sensor-derived events.
+STOPme is a modular and extensible Python system designed to connect wireless BLE wearable sensors and multisensory actuators to create real-time, responsive feedback based on detected events.
 
 This repository evolves from a working prototype (**STOPme_V0.3.0**) and restructures it into a fully decoupled architecture with centralized event dispatching, modular actuator control, and structured logging.
 
 ## Features
 - Real-time acquisition from BLE devices (BlueCoin, MetaMotion)
-- Local event recognition logic via configurable recognizers
-- Modular actuator control (LED strip, vibration motor, speaker, logger)
-- Centralized event dispatcher with pluggable activation policies
+- Local event recognition logic
+- Modular actuator control (LED strip, vibration motor, speaker)
+- Centralized event dispatcher with pluggable actuations policies
 - Structured and thread-safe event + system logging
 - Scalable, testable, and maintainable architecture
 
@@ -103,50 +103,47 @@ pip install opuslib playsound flux_led
 
 ## Project Structure
 ```bash
-progetto_stopme/
-├── main.py                        # Entry point of the application
-├── config.yaml                    # Configuration file for devices, thresholds, mappings
+STOPme/
+├── main.py                                    # Entry point of the application
+├── config.yaml                                # Configuration file for devices, buffers and logging details
 
-├── core/                          # Core logic and coordination
-│   ├── event_dispatcher.py        # Reads events and routes them to actuators
-│   ├── actuator_manager.py        # Manages actuators instances and mappings
-│   ├── sensor_manager.py        # Manages sensors instances and mappings
-│   ├── actuation_policy.py       # Defines logic for selecting which actuators to trigger
+├── actuators/                                 # Modules that perform output actions
+│   ├── led_strip.py                           # Controls LED patterns
+│   ├── speaker.py                             # Plays audio via Bluetooth speaker ESP Muse Luxe
+│   ├── metawear.py                            # Handles MetaMotion connection and vibration
+│   ├── actuator_manager.py                    # Manages actuators scans, connections and activation
 
-├── data_pipeline/                   # Sensor data interpreters (event recognition)
-│   ├── activity.py                # Maps activity feature values to semantic events
-│   └── temperature.py             # Detects threshold crossings and emits events
+├── assets/                                    # Audio, visual, or external resources
+│   └── audio/                                 # Audio alerts in mp3 format
 
-├── actuators/                     # Modules that perform output actions
-│   ├── led_strip.py               # Controls LED patterns
-│   ├── speaker.py                 # Plays audio via Bluetooth speaker
-│   ├── metawear.py                # Handles MetaMotion connection and vibration
+├── classifiers/                               # Event dectection logic
+│   ├── stereotipy_classifier.py               # Classifier class with logging logic
+│   ├── predict_models_wrapper_quat.py         # Wrapper for event recognition library
+│   ├── libPredictPericolosaWristsQuat.so      # C library for event recognition (FineTree classifier)
 
-├── sensors/                       # BLE device interface and data acquisition
-│   ├── bluecoin.py                # Manages BlueCoin device connections and data
-│   └── feature_listener.py        # Generic listener that uses data_pipeline
+├── core/                                      # Core logic and coordination
+│   ├── event_dispatcher.py                    # Reads events from a queue and routes them to actuators
+│   ├── actuation_policy.py                    # Defines logic for selecting which actuators to trigger
+
+├── data_pipeline/                             # Data stream buffering and processing 
+│   ├── data_buffer.py                         # Stores synchronized data in a sliding window buffer ready for processing
+│   ├── synchronizer.py                        # Synchronizes data between two separate stream
+│   ├── data_processing_wrapper_quat.py        # Wrapper for processing library
+│   ├── libProcessDataWristsQuat.so            # C library for data processing
+
+├── sensors/                                   # BLE device interface and data acquisition
+│   ├── bluecoin.py                            # Defines BlueCoin device connections 
+│   ├── sensor_manager.py                      # Manages sensors instances and data stream
+│   └── feature_listener.py                    # Listener for specific features (accelerometer, gyroscope and quaternions)
+│   └── feature_mems_sensor_fusion_compact.py  # Host side quaternion reconstruction logic
 
 ├── utils/                         # Utility functions and helpers
-│   └── config.py                  # Manages general configuration, paths and timeouts
-│   └── audio_paths.py             # Manages file paths, names
-│   └── logger.py                  # Logs sensor events and triggered actuations
-│   └── lock.py                    # Contains global thread-safety locks
-
-├── assets/                        # Audio, visual, or external resources
-│   └── audio/                     # Audio alerts in mp3 format
-
-└── legacy/                        # Previous working prototype for reference only
-    └── STOPme_V0.3.0/
-        ├── PROTOTYPE_V0.3.0.py    # Original monolithic main script
-        └── MyModules/             # Support modules for the prototype
+│   └── config.py                  # Manages general configuration, paths and timeouts, from config.yaml
+│   └── audio_paths.py             # Manages audio file paths
+│   └── logger.py                  # Logs sensor events with duration and actuation, and system events
+│   └── lock.py                    # Global thread-safety locks
+│   ├── event_queue.py             # Control logic for queue stream
 ```
-
-## Legacy
-The folder legacy/STOPme_V0.3.0/ contains the original monolithic prototype that this project is based on.
-
-It includes functional but tightly coupled logic for BLE sensor handling, actuation, and logging, and served as the foundation for the current modular architecture.
-
-This code is preserved for reference only and is no longer maintained.
 
 ## License
 
