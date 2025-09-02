@@ -78,7 +78,7 @@ class BlueCoinThread(threading.Thread):
     """
     Thread for managing connection to a single BlueCoin device with multiple features at the same time.
     Features can be pass either as single instance or list.
-    Attributes:
+    Parameters:
         node: BlueST Node object representing the BlueCoin device.
         feature: Feature or list[Feature].
         feature_listener: FeatureListener or list[FeatureListener]. Same length as feature.
@@ -111,7 +111,10 @@ class BlueCoinThread(threading.Thread):
     # Thread lifecycle
     def run(self):
         log_system(f"[BlueCoin Thread: {self.device_id}] Thread started.")
-        self._connect()
+        ok = self._connect()
+        if not ok or self.stop_event.is_set():
+            self._cleanup()
+            return
         self._start_notifications()
         self._listen()
 
@@ -122,16 +125,16 @@ class BlueCoinThread(threading.Thread):
         log_system(f"[BlueCoin Thread: {self.device_id}] Thread stopped.")
 
     # Thread internals
-    def _connect(self):
+    def _connect(self) -> bool:
         self.node.add_listener(self.node_listener)
         while not self.node.connect():
             if self.stop_event.is_set():
-                return
+                return False
             log_system(f"[BlueCoin Thread: {self.device_id}] Connection failed, retrying...", level="WARNING")
             # 1 second interruptable wait
             for _ in range(10):
                 if self.stop_event.is_set():
-                    return
+                    return False
                 time.sleep(0.1)
         log_system(f"[BlueCoin Thread: {self.device_id}] Connected successfully.")
         # Attach listeners for all features
@@ -140,6 +143,7 @@ class BlueCoinThread(threading.Thread):
                 feature.add_listener(listener)
             except Exception as e:
                 log_system(f"[BlueCoin Thread: {self.device_id}] add_listener error: {e}", level="ERROR")
+        return True
 
     def _start_notifications(self):
         # Enable BLE notifications for all features
@@ -172,7 +176,7 @@ class BlueCoinThread(threading.Thread):
                 log_system(f"[BlueCoin Thread: {self.device_id}] BTLE exception caught", level="ERROR")
                 self._handle_reconnection()
             except Exception as e:
-                log_system(f"BlueCoin Thread: {self.device_id}] wait_for_notifications error: {e}", level="ERROR")
+                log_system(f"[BlueCoin Thread: {self.device_id}] wait_for_notifications error: {e}", level="ERROR")
                 self._handle_reconnection()
         self._cleanup()
 
@@ -212,7 +216,7 @@ class BlueCoinThread(threading.Thread):
             pass
         # Remove listener before disconnect
         try:
-            self.node.disconnect()
+            self.node.remove_listener(self.node_listener)
         except Exception:
             # Doesn't raise exception during shutdown
             pass

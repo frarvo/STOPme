@@ -6,7 +6,6 @@
 # Repository: https://github.com/frarvo/STOPme
 # License: MIT
 
-from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
@@ -57,18 +56,8 @@ class IMUSynchronizer:
         # Determine left/right device IDs from bluecoins section of config.yaml
         bc = get_bluecoin_config() or []
         ids = [e.get("id") for e in bc if isinstance(e, dict) and e.get("id")]
-        # prefer explicit bc_left / bc_right if present
-        if "bc_left" in ids and "bc_right" in ids:
-            self.left_id, self.right_id = "bc_left", "bc_right"
-        else:
-            # fallback: take first two in order
-            if len(ids) >= 2:
-                self.left_id, self.right_id = ids[0], ids[1]
-                log_system(f"[IMUSync] Using first two bluecoin ids as L/R: {self.left_id}, {self.right_id}", level="WARNING")
-            else:
-                # if config is broken, still set placeholders (listeners will simply not match sides)
-                self.left_id, self.right_id = "bc_left", "bc_right"
-                log_system("[IMUSync] WARNING: could not determine left/right ids from config.", level="WARNING")
+
+        self.left_id, self.right_id = "bc_left", "bc_right"
 
         log_system(f"[IMUSync] Init: L={self.left_id} R={self.right_id} "
                    f"skew={int(self.max_skew*1000)}ms stale={'off' if self.stale==0 else str(int(self.stale*1000))+'ms'}")
@@ -86,6 +75,8 @@ class IMUSynchronizer:
         self._emits = 0
         self._drops_left = 0
         self._drops_right = 0
+
+        self._pending_row = None
 
     # Public call for listeners
     def update(self, device_id: str, kind: str, values, ts: float) -> None:
@@ -114,6 +105,14 @@ class IMUSynchronizer:
                 return
 
             self._try_emit_locked()
+            row = self._pending_row
+            if row:
+                (Racc, Rgyr, Rquat, Lacc, Lgyr, Lquat, ts_emit) = row
+                try:
+                    self.buffer.add_buffer_row(Racc, Rgyr, Rquat, Lacc, Lgyr, Lquat, ts_emit)
+                finally:
+                    with self._lock:
+                        self._pending_row = None
 
     # Internals (lock held)
     # Push synced row to buffer
@@ -136,24 +135,24 @@ class IMUSynchronizer:
         if abs(tL - tR) <= self.max_skew:
             try:
                 ts_emit = max(tL, tR)
-                # RIGHT first
-                self.buffer.add_buffer_row(
-                    R.acc, R.gyr, R.quat,
-                    L.acc, L.gyr, L.quat,
-                    ts_emit
-                )
+                # RIGHT first then LEFT, then timestamp
+                row = (R.acc, R.gyr, R.quat, L.acc, L.gyr, L.quat, ts_emit)
                 self._emits += 1
-            except Exception as e:
-                log_system(f"[IMUSync] add_buffer_row error: {type(e).__name__}: {e}", level="ERROR")
-            finally:
                 L.clear_triplet()
                 R.clear_triplet()
+            except Exception as e:
+                log_system(f"[IMUSync] add_buffer_row error: {type(e).__name__}: {e}", level="ERROR")
         else:
             # Not aligned: drop the older triplet to resync quickly
             if (tL + self.max_skew) < tR:
-                L.clear_triplet(); self._drops_left += 1
+                L.clear_triplet();
+                self._drops_left += 1
             elif (tR + self.max_skew) < tL:
-                R.clear_triplet(); self._drops_right += 1
+                R.clear_triplet();
+                self._drops_right += 1
+            row = None
+
+        self._pending_row = row
 
     # optional helpers
     def get_stats(self) -> Dict[str, int]:

@@ -18,9 +18,8 @@ from bluepy.btle import Scanner
 
 from utils.lock import device_reconnection_lock
 
-meta_config = get_metamotion_config()
 
-def scan_metamotion_devices(timeout: int = meta_config.get('scan_timeout')) -> list[str]:
+def scan_metamotion_devices(timeout: int) -> list[str]:
     """
     Scans for nearby MetaMotion BLE devices and returns their MAC addresses.
 
@@ -30,11 +29,17 @@ def scan_metamotion_devices(timeout: int = meta_config.get('scan_timeout')) -> l
     Returns:
         List[str]: A list of MAC addresses (strings) corresponding to MetaWear devices.
     """
+    cfg = get_metamotion_config() or {}
+    timeout = int(cfg.get('scan_timeout',5)) if timeout is None else int(timeout)
+
     log_system(f"[MetaMotion Scanner] Starting BLE scan for {timeout} seconds...")
     mac_list = []
-
-    scanner = Scanner()
-    devices = scanner.scan(timeout)
+    try:
+        scanner = Scanner()
+        devices = scanner.scan(timeout)
+    except Exception as e:
+        log_system(f"[MetaMotion Scanner] Scan error: {e}", level="ERROR")
+        return []
 
     for dev in devices:
         name = dev.getValueText(9)  # 9 = Complete Local Name
@@ -77,10 +82,11 @@ class MetaMotionThread(threading.Thread):
         self.vibration_time = 500
         self.device = None
         self.vibration_lock = threading.Lock()
+        cfg = get_metamotion_config() or {}
 
-        self.fast_retry_attempts = meta_config.get("fast_retry_attempts", 10)
-        self.retry_interval = meta_config.get("retry_interval", 5)
-        self.retry_sleep = meta_config.get("retry_sleep", 60)
+        self.fast_retry_attempts = int(cfg.get("fast_retry_attempts", 10))
+        self.retry_interval = int(cfg.get("retry_interval", 5))
+        self.retry_sleep = int(cfg.get("retry_sleep", 60))
 
     def run(self):
         """
@@ -190,7 +196,7 @@ class MetaMotionThread(threading.Thread):
         except Exception:
             pass
 
-        if self.is_alive():
+        if threading.current_thread() is not self and self.is_alive():
             self.join()
         log_system(f"[MetaMotion: {self.mac_address}] Thread stopped.")
 

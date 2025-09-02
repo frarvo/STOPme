@@ -6,15 +6,17 @@
 # Repository: https://github.com/frarvo/STOPme
 # License: MIT
 
-from queue import Queue
+from queue import Queue, Full, Empty
 from typing import Optional, Tuple, Any
-MAX_Q_SIZE = 1
+from utils.config import get_event_queue_size
+
+MAX_Q_SIZE = get_event_queue_size()
 
 # Shared queue (with limit to avoid stacking and losing real time)
 _event_queue = Queue(maxsize=MAX_Q_SIZE)
 
 # Counter for internal regulation (if an event is dropped when queue is full, duration would be wrong)
-_dropped_counts = {"event":0}
+_dropped_counts = {"imu":0, "event":0}
 
 def get_event_queue() -> Queue:
     """
@@ -27,26 +29,23 @@ def enqueue_drop_oldest(q: Queue, item, kind:Optional[str] = None) -> Tuple[bool
     Enque 'item'. If queue is full, drops the oldest item. Reduces latency
     Returns dropped flag and dropped item
     """
-    dropped = False
-    dropped_item = None
     try:
         q.put_nowait(item)
         return False, None
-    except Exception:
+    except Full:
         # Queue is full, drop oldest, try new enqueue
+        dropped_item = None
         try:
             dropped_item = q.get_nowait()
-            dropped = True
-        except Exception:
-            return False, None
+        except Empty:
+            return False,None
         try:
             q.put_nowait(item)
-        except Exception:
-            return dropped, dropped_item
-
-    if dropped and kind in _dropped_counts:
-        _dropped_counts[kind] += 1
-    return dropped, dropped_item
+        except Full:
+            pass
+        if kind:
+            _dropped_counts[kind] = _dropped_counts.get(kind, 0) + 1
+            return True,dropped_item
 
 def get_drop_count(kind:str) -> int:
     """

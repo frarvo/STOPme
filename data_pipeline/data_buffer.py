@@ -95,8 +95,6 @@ class DataBuffer:
                 window_rows = self._rows[start : start + self.window_size]
                 window_ts   = self._ts[start   : start + self.window_size]
 
-                self._on_window_ready(window_rows, window_ts)
-
                 # Slide forward by hop
                 keep_from = self.hop_size
                 if keep_from <= 0:
@@ -106,6 +104,9 @@ class DataBuffer:
                 else:
                     self._rows = self._rows[keep_from:]
                     self._ts   = self._ts[keep_from:]
+
+        if window_rows is not None:
+            self._on_window_ready(window_rows, window_ts)
 
     def set_features_sink(self, sink: Callable[[np.ndarray, float, bool], None]) -> None:
         """

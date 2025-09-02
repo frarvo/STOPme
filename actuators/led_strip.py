@@ -76,10 +76,10 @@ class LedThread(threading.Thread):
 
         self._bulb: Optional[flux_led.WifiLedBulb] = None
 
-        config = get_led_strip_config()
-        self._fast_retry_attempts: int = config.get("fast_retry_attempts", 5)
-        self._retry_interval: int = config.get("retry_interval", 5)
-        self._retry_sleep: int = config.get("retry_sleep", 60)
+        cfg = get_led_strip_config()
+        self._fast_retry_attempts = int(cfg.get("fast_retry_attempts", 5))
+        self._retry_interval = int(cfg.get("retry_interval", 5))
+        self._retry_sleep = int(cfg.get("retry_sleep", 60))
 
     def run(self) -> None:
         log_system(f"[LedStrip: {self.ip_address}] Thread started")
@@ -215,6 +215,6 @@ class LedThread(threading.Thread):
     def stop(self) -> None:
         self._stop_event.set()
         self._event.set()
-        if self.is_alive():
+        if threading.current_thread() is not self and self.is_alive():
             self.join()
         log_system(f"[LedStrip: {self.ip_address}] Thread stopped")

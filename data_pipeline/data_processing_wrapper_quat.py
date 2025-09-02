@@ -10,6 +10,7 @@ import ctypes as ct
 import numpy as np
 import os
 from numpy.ctypeslib import ndpointer
+from utils.config import get_buffer_config
 
 # Load data processing library
 lib_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +18,7 @@ LIB_PATH = os.path.join(lib_dir, "libProcessDataWristsQuat.so")
 lib = ct.CDLL(LIB_PATH)
 
 # Define constants
-N = 150     # Input channel size
+N = get_buffer_config().get("window_size")  # Input channel size
 FEAT = 18   # Output features
 boolean_T = ct.c_uint8
 

@@ -16,9 +16,7 @@ from utils.config import get_speaker_config
 from utils.audio_paths import AudioLibrary
 from utils.lock import device_reconnection_lock
 
-speaker_config = get_speaker_config()
-
-def scan_speaker_devices(timeout: int = speaker_config.get('scan_timeout')) -> list[str]:
+def scan_speaker_devices(timeout: int) -> list[str]:
     """
     Scans for nearby Bluetooth speakers using bluetoothctl and returns a list of MAC addresses.
 
@@ -32,8 +30,13 @@ def scan_speaker_devices(timeout: int = speaker_config.get('scan_timeout')) -> l
     Returns:
         List[str]: A list of MAC addresses corresponding to compatible audio devices.
     """
+    cfg = get_speaker_config() or {}
+    timeout = int(cfg.get("scan_timeout", 5)) if timeout is None else int(timeout)
+
     log_system(f"[Speaker Scanner] Starting Bluetooth scan for {timeout} seconds...")
     mac_list = []
+
+    process = None
 
     try:
         # Start scan session with bluetoothctl
@@ -78,12 +81,13 @@ def scan_speaker_devices(timeout: int = speaker_config.get('scan_timeout')) -> l
         return []
 
     finally:
-        try:
-            process.stdin.close()
-            process.terminate()
-            process.wait()
-        except Exception:
-            pass
+        if process:
+            try:
+                process.stdin.close()
+                process.terminate()
+                process.wait()
+            except Exception:
+                pass
 
 class SpeakerThread(threading.Thread):
     """
@@ -110,11 +114,11 @@ class SpeakerThread(threading.Thread):
         self.stop_event = threading.Event()
         self.file = None
         self.connected = False
+        cfg = get_speaker_config() or {}
 
-
-        self.fast_retry_attempts = speaker_config.get("fast_retry_attempts", 5)
-        self.retry_interval = speaker_config.get("retry_interval", 5)
-        self.retry_sleep = speaker_config.get("retry_sleep", 60)
+        self.fast_retry_attempts = int(cfg.get("fast_retry_attempts", 5))
+        self.retry_interval = int(cfg.get("retry_interval", 5))
+        self.retry_sleep = int(cfg.get("retry_sleep", 60))
 
     def run(self):
         """
@@ -175,7 +179,7 @@ class SpeakerThread(threading.Thread):
         """
         self.stop_event.set()
         self.event.set()
-        if self.is_alive():
+        if threading.current_thread() is not self and self.is_alive():
             self.join()
         log_system(f"[Speaker: {self.mac_address}] Thread stopped")
 

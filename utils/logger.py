@@ -97,9 +97,9 @@ def log_system(message: str, level: str = "INFO"):
     log_base = Path(get_log_path())
     folder = _get_day_folder(log_base)
     filepath = folder / "System_Log.log"
-
-    with open(filepath, "a") as f:
-        f.write(line)
+    with logging_lock:
+        with open(filepath, "a") as f:
+            f.write(line)
 
 _last_event_timestamp: datetime = None
 _last_event_file: Path = None
@@ -130,7 +130,11 @@ def log_event(timestamp: str,
     csv_filename = f"Event_Diary_{source}.csv"
     csv_path = folder / csv_filename
 
-    now = datetime.fromisoformat(timestamp)
+    try:
+        now = datetime.fromisoformat(timestamp)
+    except Exception:
+        now = datetime.now()
+
     date_str = now.strftime("%d-%m-%Y")
     time_str = now.strftime("%H:%M:%S")
 

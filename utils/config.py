@@ -123,6 +123,12 @@ def get_policy_attempts() -> int:
         attempts:       number of attemps before changing actuator
     """
     policy_config = CONFIG.get("policy", {}) or {}
-    return policy_config.get("attempts", 5)
+    return int(policy_config.get("attempts", 5))
 
+# QUEUE SIZE
+def get_event_queue_size() -> int:
+    """
+    Returns event queue size from config.yaml
+    """
+    return int(CONFIG.get("event_queue_size", 5))
 

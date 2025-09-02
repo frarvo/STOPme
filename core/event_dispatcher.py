@@ -68,7 +68,6 @@ class EventDispatcher:
 
                 # If gated (not calibrated) skip actuation but still log
                 gated = bool(event.get("gated", False))
-                result = None
                 actuations = []
 
                 if gated:
@@ -76,21 +75,29 @@ class EventDispatcher:
                 else:
                     result = self.policy.handle(event)
                     if result:
-                        self.actuator_manager.trigger(
-                            actuator_id=result["actuator_id"],
-                            action_type="stereotipy_event",
-                            **result["params"]
-                        )
-                        actuations = [{"target": result["actuator_id"], "params": result["params"]}]
+                        try:
+                            self.actuator_manager.trigger(
+                                actuator_id=result["actuator_id"],
+                                action_type="stereotipy_event",
+                                **result["params"]
+                            )
+                            actuations = [{"target": result["actuator_id"], "params": result["params"]}]
+                        except Exception as e:
+                            log_system(f"[Dispatcher] Trigger error on {result.get('actuator_id')}: {e}", level="ERROR")
                     else:
                         log_system("[Dispatcher] Policy returned no action.")
 
                 log_event(
                     timestamp=event.get("timestamp"),
-                    feature_type=event.get("type", "imu"),
+                    feature_type="imu",
                     event=label,
                     actuations=actuations,
                     source=event.get("source", "dual_wrist")
                 )
             except Exception as e:
                 log_system(f"[Dispatcher] Dispatch error: {e}", level="ERROR")
+            finally:
+                try:
+                    q.task_done()
+                except Exception:
+                    pass

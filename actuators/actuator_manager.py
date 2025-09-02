@@ -15,6 +15,7 @@ from actuators.metamotion import scan_metamotion_devices, MetaMotionThread
 from actuators.speaker import scan_speaker_devices, SpeakerThread
 from utils.logger import log_system
 from utils.lock import device_scan_lock
+from utils.config import get_speaker_config, get_metamotion_config, get_led_strip_config
 
 class ActuatorManager:
     """
@@ -29,20 +30,29 @@ class ActuatorManager:
         self.speaker_addresses = []
         self.metamotion_addresses = []
         self.led_addresses = []
+        self.speaker_enable = {}
+        self.meta_enable = {}
+        self.led_enable = {}
         log_system("[ActuatorManager] Initialized")
 
     def scan_actuators(self):
         """
-        Scans all types of actuator devices and stores their addresses.
+        Scan wanted (from config.yaml) actuator devices and store their addresses.
         """
         log_system("[ActuatorManager] Scanning for all actuator devices...")
-        with device_scan_lock:
-            self.speaker_addresses = scan_speaker_devices(5) or []
-            time.sleep(2)
-            self.metamotion_addresses = scan_metamotion_devices(5) or []
-            time.sleep(2)
-            self.led_addresses = scan_led_devices(10) or []
-            time.sleep(2)
+        self.speaker_enable = (get_speaker_config() or {}).get("enable", True)
+        self.meta_enable = (get_metamotion_config() or {}).get("enable", True)
+        self.led_enable = (get_led_strip_config() or {}).get("enable", True)
+
+        if self.speaker_enable:
+            with device_scan_lock:
+                self.speaker_addresses = scan_speaker_devices(5) or []
+        if self.meta_enable:
+            with device_scan_lock:
+                self.metamotion_addresses = scan_metamotion_devices(5) or []
+        if self.led_enable:
+            with device_scan_lock:
+                self.led_addresses = scan_led_devices(10) or []
 
     def initialize_actuators(self):
         """
@@ -50,29 +60,36 @@ class ActuatorManager:
         """
         log_system("[ActuatorManager] Initializing all actuator devices...")
 
-        for mac in self.speaker_addresses:
-            actuator_id = f"speaker_{mac}"
-            thread = SpeakerThread(mac)
-            thread.start()
-            self.actuators[actuator_id] = thread
-            log_system(f"[ActuatorManager] Speaker initialized: {actuator_id}")
-            time.sleep(2)
-
-        for mac in self.metamotion_addresses:
-            actuator_id = f"meta_{mac}"
-            thread = MetaMotionThread(mac)
-            thread.start()
-            self.actuators[actuator_id] = thread
-            log_system(f"[ActuatorManager] MetaMotion initialized: {actuator_id}")
-            time.sleep(2)
-
-        for ip in self.led_addresses:
-            actuator_id = f"led_{ip}"
-            thread = LedThread(ip)
-            thread.start()
-            self.actuators[actuator_id] = thread
-            log_system(f"[ActuatorManager] LED initialized: {actuator_id}")
-            time.sleep(2)
+        if self.speaker_enable:
+            for mac in self.speaker_addresses:
+                try:
+                    actuator_id = f"speaker_{mac}"
+                    thread = SpeakerThread(mac)
+                    thread.start()
+                    self.actuators[actuator_id] = thread
+                    log_system(f"[ActuatorManager] Speaker initialized: {actuator_id}")
+                except Exception as e:
+                    log_system(f"[ActuatorManager] Speaker {mac} initialization failed: {e}", level="ERROR")
+        if self.meta_enable:
+            for mac in self.metamotion_addresses:
+                try:
+                    actuator_id = f"meta_{mac}"
+                    thread = MetaMotionThread(mac)
+                    thread.start()
+                    self.actuators[actuator_id] = thread
+                    log_system(f"[ActuatorManager] MetaMotion initialized: {actuator_id}")
+                except Exception as e:
+                    log_system(f"[ActuatorManager] MetaMotion {mac} initialization failed: {e}", level="ERROR")
+        if self.led_enable:
+            for ip in self.led_addresses:
+                try:
+                    actuator_id = f"led_{ip}"
+                    thread = LedThread(ip)
+                    thread.start()
+                    self.actuators[actuator_id] = thread
+                    log_system(f"[ActuatorManager] LED initialized: {actuator_id}")
+                except Exception as e:
+                    log_system(f"[ActuatorManager] LED {ip} initialization failed: {e}", level="ERROR")
 
         log_system("[ActuatorManager] Initialization complete")
 
