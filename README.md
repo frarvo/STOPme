@@ -111,7 +111,7 @@ progetto_stopme/
 │   ├── event_dispatcher.py        # Reads events and routes them to actuators
 │   ├── actuator_manager.py        # Manages actuators instances and mappings
 │   ├── sensor_manager.py        # Manages sensors instances and mappings
-│   ├── activation_policy.py       # Defines logic for selecting which actuators to trigger
+│   ├── actuation_policy.py       # Defines logic for selecting which actuators to trigger
 
 ├── data_pipeline/                   # Sensor data interpreters (event recognition)
 │   ├── activity.py                # Maps activity feature values to semantic events

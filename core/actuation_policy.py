@@ -1,4 +1,4 @@
-# activation_policy.py
+# actuation_policy.py
 # Defines which actuators to activate based on the events.
 #
 # Author: Francesco Urru

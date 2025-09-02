@@ -1,5 +1,13 @@
 # main.py
 # Entry point for the STOPme system
+# Receives IMU+Quaternion data from dual wrist bracelets (BlueCoin), detect stereotipy events, logs them and calls actuation accordingly.
+# Sensor manage scans for sensors, connect to sensors, sends data to synchronizer,
+# Synchronizer syncs the two data streams and fills a buffer.
+# Buffer fill up and call processing.
+# Processing extracts features from IMU data and arm angle from quaternions, when ready calls classifier.
+# Classifier generates stereotipy event and pushes events to queue.
+# Dispatcher consumes event queue, logs to event diary and calls actuation based on actuation policy.
+# Actuation policy decides which actuator to use and for how long. Has memory for most effective.
 #
 # Author: Francesco Urru
 # Repository: https://github.com/frarvo/STOPme
@@ -10,7 +18,7 @@ import time
 from sensors.sensor_manager import SensorManager
 from actuators.actuator_manager import ActuatorManager
 
-from core.activation_policy import StereotipyActivationPolicy
+from core.actuation_policy import StereotipyActivationPolicy
 from core.event_dispatcher import EventDispatcher
 
 from utils.logger import log_system
