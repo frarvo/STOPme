@@ -19,8 +19,7 @@ lib = ct.CDLL(LIB_PATH)
 
 # Define constants
 N = get_buffer_config().get("window_size")  # Input channel size
-FEAT = 18   # Output features
-boolean_T = ct.c_uint8
+FEAT = 18   # Output feature vector length
 
 # Define data types
 Float150 = ndpointer(dtype=np.float32, shape=(N,), flags=("C_CONTIGUOUS",))
@@ -38,8 +37,6 @@ lib.ProcessDataWristsQuat.argtypes = [
     Float150, Float150, Float150, Float150,
     # LEFT quaternions x, y, z, w
     Float150, Float150, Float150, Float150,
-    # Calibration flag
-    boolean_T,
     # OUTPUT
     Float18
 ]
@@ -54,12 +51,15 @@ except AttributeError:
 
 def _as_f32_150(x):
     """
-    Ensure a size 150 float32 array
+    Ensure a size N float32 array
     """
     a = np.asarray(x, dtype=np.float32).reshape(-1)
     if a.size != N:
         raise ValueError(f"Expected lenght {N}, got {a.size}")
-    a = np.ascontiguousarray(a, dtype=np.float32)
+    if not a.flags.c_contiguous:
+        a = np.ascontiguousarray(a, dtype=np.float32)
+    elif a.dtype != np.float32:
+        a = a.astype(np.float32, copy=False)
     if not a.flags.writeable:
         a = a.copy()
     return a
@@ -68,7 +68,7 @@ def initialize():
     """
     Calls ProcessDataWristsQuat_init if available
     """
-    f = getattr(lib, "ProcessDataWristsQuat_init", None)
+    f = getattr(lib, "ProcessDataWristsQuat_initialize", None) or getattr(lib, "ProcessDataWristsQuat_init", None)
     if f:
         f()
 
@@ -79,7 +79,6 @@ def process_data_wrists_quat(
     accX_L, accY_L, accZ_L, gyrX_L, gyrY_L, gyrZ_L,
     quatRW_x, quatRW_y, quatRW_z, quatRW_w,
     quatLW_x, quatLW_y, quatLW_z, quatLW_w,
-    doCalibrate: bool
 ) -> np.ndarray:
     """
     Call the C library for data processing and return imuFeatures[18] as float32.
@@ -95,6 +94,6 @@ def process_data_wrists_quat(
     out = np.empty(FEAT, dtype=np.float32)
 
     # Call C API
-    lib.ProcessDataWristsQuat(*arrs, boolean_T(1 if doCalibrate else 0), out)
+    lib.ProcessDataWristsQuat(*arrs, out)
 
     return out

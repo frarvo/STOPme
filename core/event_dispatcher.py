@@ -8,6 +8,8 @@
 
 import queue
 import threading
+import time
+
 from utils.event_queue import get_event_queue
 from utils.logger import log_system,log_event
 
@@ -18,6 +20,8 @@ LABELS = {
     2: "DANGEROUS",
     3: "NON_STEREOTIPY",
 }
+
+ACTUATION_COOLDOWN = 5
 
 class EventDispatcher:
     """
@@ -34,6 +38,8 @@ class EventDispatcher:
         self.policy = policy
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._process_events, daemon=True)
+        self._last_tag = None
+        self._last_actuation_time = None
 
     def start(self):
         """
@@ -66,13 +72,10 @@ class EventDispatcher:
                     tag = None
                 label = LABELS.get(tag, str(raw_tag))
 
-                # If gated (not calibrated) skip actuation but still log
-                gated = bool(event.get("gated", False))
-                actuations = []
-
-                if gated:
-                    log_system("[Dispatcher] Event gated (sensor not calibrated); Skipping actuation.")
-                else:
+                now_time = time.monotonic()
+                if tag != self._last_tag:
+                    actuations = []
+                    # At each tag change call policy to handle event actuation
                     result = self.policy.handle(event)
                     if result:
                         try:
@@ -82,18 +85,43 @@ class EventDispatcher:
                                 **result["params"]
                             )
                             actuations = [{"target": result["actuator_id"], "params": result["params"]}]
+                            self._last_actuation_time = now_time
                         except Exception as e:
                             log_system(f"[Dispatcher] Trigger error on {result.get('actuator_id')}: {e}", level="ERROR")
                     else:
                         log_system("[Dispatcher] Policy returned no action.")
+                        # Reset actuation timer
+                        self._last_actuation_time = None
 
-                log_event(
-                    timestamp=event.get("timestamp"),
-                    feature_type="imu",
-                    event=label,
-                    actuations=actuations,
-                    source=event.get("source", "dual_wrist")
-                )
+                    log_event(
+                        timestamp=event.get("timestamp"),
+                        feature_type="imu",
+                        event=label,
+                        actuations=actuations,
+                        source=event.get("source", "dual_wrist")
+                    )
+                    self._last_tag = tag
+                else:
+                    # If tag is same but elapsed time > ACTUATION_COOLDOWN , retrigger actuation (only if tag is about stereotipy)
+                    if tag in (1,2):
+                        should_retry = (self._last_actuation_time is None or (now_time - self._last_actuation_time) >= ACTUATION_COOLDOWN)
+                        if should_retry:
+                            try:
+                                # Call policy on same tag (policy has internal variation/attemps counter)
+                                result = self.policy.handle(event)
+                                if result:
+                                    self.actuator_manager.trigger(
+                                        actuator_id=result["actuator_id"],
+                                        action_type="stereotipy_event",
+                                        **result["params"]
+                                    )
+                                    self._last_actuation_time = now_time
+                            except Exception as e:
+                                log_system(f"[Dispatcher] Trigger retry error: {e}", level="ERROR")
+                    else:
+                        # tag 0,3 no actions
+                        pass
+
             except Exception as e:
                 log_system(f"[Dispatcher] Dispatch error: {e}", level="ERROR")
             finally:

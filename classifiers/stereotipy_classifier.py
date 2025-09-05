@@ -33,13 +33,12 @@ class StereotipyClassifier:
         initialize()
 
     # Sink for buffer callback to processing
-    def recognize(self, features: np.ndarray, ts: float, gated: bool = False):
+    def recognize(self, features: np.ndarray, ts: float):
         """
         Recognize from processed features. Entry point from buffer
         Args:
             features (np.ndarray): shape (18,), dtype float32
             ts: timestamp of last buffer row
-            gated: flag for actuation gating (prevents actuation)
         """
         try:
             feats = np.asarray(features, dtype=np.float32).reshape(-1)
@@ -51,7 +50,6 @@ class StereotipyClassifier:
                 "id": uuid.uuid4().hex,
                 "timestamp": datetime.now().isoformat(),
                 "window_ts": float(ts) if ts is not None else None,
-                "gated": bool(gated),
                 "source": self.source,
                 "features": features.tolist(),
                 "stereotipy_tag": str(predict_pericolosa_wrists_quat(feats))

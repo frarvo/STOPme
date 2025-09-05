@@ -89,6 +89,7 @@ class IMUSynchronizer:
         if device_id not in self._state:
             return
 
+        row = None
         with self._lock:
             st = self._state[device_id]
             try:
@@ -106,13 +107,10 @@ class IMUSynchronizer:
 
             self._try_emit_locked()
             row = self._pending_row
+            self._pending_row = None
             if row:
                 (Racc, Rgyr, Rquat, Lacc, Lgyr, Lquat, ts_emit) = row
-                try:
-                    self.buffer.add_buffer_row(Racc, Rgyr, Rquat, Lacc, Lgyr, Lquat, ts_emit)
-                finally:
-                    with self._lock:
-                        self._pending_row = None
+                self.buffer.add_buffer_row(Racc, Rgyr, Rquat, Lacc, Lgyr, Lquat, ts_emit)
 
     # Internals (lock held)
     # Push synced row to buffer
@@ -145,10 +143,10 @@ class IMUSynchronizer:
         else:
             # Not aligned: drop the older triplet to resync quickly
             if (tL + self.max_skew) < tR:
-                L.clear_triplet();
+                L.clear_triplet()
                 self._drops_left += 1
             elif (tR + self.max_skew) < tL:
-                R.clear_triplet();
+                R.clear_triplet()
                 self._drops_right += 1
             row = None
 

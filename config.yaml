@@ -10,6 +10,8 @@
 log_base_path: ~/Documents/STOPME/logs  # Path where logs are saved. User folder is automatically detected
 
 enable_system_log: true      # Create/Log system status messages
+enable_actuation_detail: false  # Log actuation used for that event
+
 debug_system_console: true   # Choose to print system events on the console
 debug_event_console: true    # Choose to print events on the console
 
@@ -48,12 +50,12 @@ sync:
   stale_ms: 100           # Drops sets of data from one wrist if it sits too long waiting for the other wrist
 
 buffer:
-  window_size: 150        # Samples per window
-  overlap: 75            # Overlap 50% -> 75 samples step
-  calibration_windows: 3  # Waits N windows before calibrating to ensure stabilization
-  gate_actuation_during_calibration: true # Prevent actuation if BlueCoin not calibrated
+  window_size: 150                        # Samples per window
+  overlap: 75                             # Overlap 50% -> 75 samples step
+  debug_print_buffer: false               # Prints buffer content (high load, 150 samples x 20 channels)
+  debug_print_features: false              # Prints feature vector
 
 policy:
-  attempts: 3  # Number of attempts with the same actuation before changing the actuator
+  attempts: 3         # Number of attempts with the same actuator before changing it
 
 event_queue_size: 5

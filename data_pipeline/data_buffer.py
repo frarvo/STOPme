@@ -31,12 +31,6 @@ class DataBuffer:
           * scale accel mg -> g
           * call process_data_wrists_quat(...)
           * push features (np.float32[18]) to the recognizer (trained classifier)
-
-    Calibration:
-      - skip the first N "stabilization" windows (from YAML: calibration_windows)
-      - next window runs with doCalibrate=True (one-time reference capture)
-      - all subsequent windows run with doCalibrate=False
-      - is_calibrated() and should_gate_actuation() queries for external use
     """
 
     def __init__(self,
@@ -47,11 +41,8 @@ class DataBuffer:
         # Get Window size and hop_size from config.yaml
         self.window_size = int(window_size if window_size is not None else cfg.get("window_size", 150))
         self.hop_size    = int(hop_size    if hop_size    is not None else cfg.get("overlap", 75))
-
-        # Calibration behavior
-        self._warmup_left = int(cfg.get("calibration_windows", 3))  # number of windows to SKIP before calibration
-        self._did_calibrate_once = False
-        self._gate_actuation = bool(cfg.get("gate_actuation_during_calibration", True))
+        self._debug_print_buffer = bool(cfg.get("debug_print_buffer", False))
+        self._debug_print_features = bool(cfg.get("debug_print_features", False))
 
         # Storage (rows and timestamps are parallel)
         self._rows: List[Tuple[float, ...]] = []   # each row has 20 floats (collected in a Tuple)
@@ -59,11 +50,13 @@ class DataBuffer:
         self._lock = threading.Lock()
 
         # Optional consumer for features (np.float32[18])
-        self._features_sink: Optional[Callable[[np.ndarray, float, bool], None]] = None
+        self._features_sink: Optional[Callable[[np.ndarray, float], None]] = None
         self._windows_emitted = 0
 
-        log_system(f"[DataBuffer] init: window= {self.window_size} hop= {self.hop_size} "
-                   f"warmup= {self._warmup_left} gate_actuation= {'on' if self._gate_actuation else 'off'}")
+        # Calibrated flag
+        self._calibrated = False
+
+        log_system(f"[DataBuffer] init: window= {self.window_size} hop= {self.hop_size}")
         init_process()
 
     # Public API for external use
@@ -76,6 +69,8 @@ class DataBuffer:
         Append one row to the buffer (order must match).
         Cast to float to match processing requirements
         """
+        window_rows = None
+        window_ts = None
         row = (
             float(R_acc[0]), float(R_acc[1]), float(R_acc[2]),                      # RIGHT acc_x, acc_y, acc_z
             float(R_gyr[0]), float(R_gyr[1]), float(R_gyr[2]),                      # RIGHT gyr_x, gyr_y, gyr_z
@@ -108,9 +103,9 @@ class DataBuffer:
         if window_rows is not None:
             self._on_window_ready(window_rows, window_ts)
 
-    def set_features_sink(self, sink: Callable[[np.ndarray, float, bool], None]) -> None:
+    def set_features_sink(self, sink: Callable[[np.ndarray, float], None]) -> None:
         """
-        Register a consumer to receive (features[18], window_end_ts, gated) per window (recognizer/classifier)
+        Register a consumer to receive (features[18], window_end_ts) per window (recognizer/classifier)
         """
         self._features_sink = sink
 
@@ -120,13 +115,6 @@ class DataBuffer:
         Build channel vectors, call processing, emit features.
         """
         self._windows_emitted += 1
-
-        # Warm-up: skip N windows entirely (no processing) to stabilize signal
-        if self._warmup_left > 0:
-            self._warmup_left -= 1
-            log_system(f"[DataBuffer] warm-up window skipped "
-                       f"(remaining={self._warmup_left})")
-            return
 
         # Build 20 np.float32 vectors (length = window_size)
         # RIGHT accel (mg -> g)
@@ -161,22 +149,30 @@ class DataBuffer:
         quatLW_z = np.asarray([r[18] for r in window_rows], dtype=np.float32)
         quatLW_w = np.asarray([r[19] for r in window_rows], dtype=np.float32)
 
-        # Decide calibration flag for this window (Calibrates on the first window after warm-up skips)
-        doCalibrate = False
-        if not self._did_calibrate_once:
-            doCalibrate = True
-            self._did_calibrate_once = True
-            log_system("[DataBuffer] calibration window -> doCalibrate=True")
-
         # Call C processing
         try:
+            if self._debug_print_buffer:
+                log_system("f[DataBuffer] [DEBUG] Pre-processing inputs: "
+                            f"{accX_R}, {accY_R}, {accZ_R}, {gyrX_R}, {gyrY_R}, {gyrZ_R}, "
+                            f"{accX_L}, {accY_L}, {accZ_L}, {gyrX_L}, {gyrY_L}, {gyrZ_L}, "
+                            f"{quatRW_x}, {quatRW_y}, {quatRW_z}, {quatRW_w} ,"
+                            f"{quatLW_x}, {quatLW_y}, {quatLW_z}, {quatLW_w} ,")
+
             features = process_data_wrists_quat(
                 accX_R, accY_R, accZ_R, gyrX_R, gyrY_R, gyrZ_R,
                 accX_L, accY_L, accZ_L, gyrX_L, gyrY_L, gyrZ_L,
                 quatRW_x, quatRW_y, quatRW_z, quatRW_w,
-                quatLW_x, quatLW_y, quatLW_z, quatLW_w,
-                doCalibrate
+                quatLW_x, quatLW_y, quatLW_z, quatLW_w
             )
+            if not self._calibrated:
+                self._calibrated = True
+                log_system(f"[DataBuffer] First window used for calibration (features discarded)")
+                return
+
+            if self._debug_print_features:
+                log_system(f"[DataBuffer] [DEBUG] Processed outputs: \n " +
+                           ", ".join(f"{x:.4f}" for x in features))
+
             # Ensure dtype/shape
             features = np.asarray(features, dtype=np.float32).reshape(-1)
         except Exception as e:
@@ -184,27 +180,17 @@ class DataBuffer:
             return
 
         window_end_ts = float(window_ts[-1]) if window_ts else 0.0
-        gated = self.should_gate_actuation()
 
-        log_system(f"[DataBuffer] window #{self._windows_emitted} processed "
-                   f"(calib={'yes' if doCalibrate else 'no'}; gated={'yes' if gated else 'no'})")
+        log_system(f"[DataBuffer] window #{self._windows_emitted} processed")
 
         # Emit to subscriber (recognizer)
         if self._features_sink is not None:
             try:
-                self._features_sink(features, window_end_ts, gated)
+                self._features_sink(features, window_end_ts)
             except Exception as e:
                 log_system(f"[DataBuffer] features sink error: {type(e).__name__}: {e}", level="ERROR")
 
     # Calibration helper
     def is_calibrated(self) -> bool:
         """True after the one-time calibration window has been executed."""
-        return self._did_calibrate_once
-
-    # Gate actuation helper
-    def should_gate_actuation(self) -> bool:
-        """
-        If gating is enabled, gate until calibration has completed.
-        Used to prevent actuation before calibration.
-        """
-        return self._gate_actuation and (not self.is_calibrated())
+        return self._calibrated

@@ -29,7 +29,7 @@ def get_log_path():
     return str(Path(expanduser(CONFIG.get("log_base_path", default_base))))
 
 def actuation_details_enabled() -> bool:
-    return CONFIG.get("log_actuation_details", True)
+    return CONFIG.get("enable_actuation_detail", True)
 
 def system_log_enabled() -> bool:
     return CONFIG.get("enable_system_log", True)
@@ -102,8 +102,8 @@ def get_buffer_config() -> dict:
     return {
         "window_size": int(buff_cfg.get("window_size", 150)),
         "overlap": int(buff_cfg.get("overlap", 75)),
-        "calibration_windows": int(buff_cfg.get("calibration_windows", 3)),
-        "gate_actuation_during_calibration": bool(buff_cfg.get("gate_actuation_during_calibration", True))
+        "debug_print_buffer": bool(buff_cfg.get("debug_print_buffer", True)),
+        "debug_print_features": bool(buff_cfg.get("debug_print_features", True))
     }
 
 # ACTUATION LANGUAGE CONFIGURATION
@@ -131,4 +131,5 @@ def get_event_queue_size() -> int:
     Returns event queue size from config.yaml
     """
     return int(CONFIG.get("event_queue_size", 5))
+
 

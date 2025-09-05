@@ -23,7 +23,8 @@ class AudioLibrary:
         "DANGEROUS_ENG": "dangerous_stereotipy_eng.mp3",
         "NON_DANGEROUS_ENG": "non_dangerous_stereotipy_eng.mp3",
         "NON_STEREOTIPY_ENG": "no_stereotipy_eng.mp3",
-        "MISSING_FILE": "missing_audio_file.mp3"
+        "MISSING_FILE": "missing_audio_file.mp3",
+        "SPEAKER_CONNECT": "speaker_connected.mp3",
     }
 
     def __getattr__(self, name):
